@@ -1,0 +1,9 @@
+project: haru256-sandbox-20250224
+# default-zone: asia-northeast1-a
+vm:
+  - name: haru256-cpu
+    project: haru256-sandbox-20250224
+    zone: asia-east1-a
+  - name: haru256-gpu
+    project: haru256-sandbox-20250224
+    zone: asia-northeast1-a

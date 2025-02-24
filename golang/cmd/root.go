@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/haru-256/gce-commands/pkg/log"
@@ -35,6 +36,7 @@ var rootCmd = &cobra.Command{
 	Long:  `Google Compute Engine commands such as listing vm and update vm-spec, add vm into stop-scheduler.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Logger.Debug("run root command")
+		log.Logger.Debug(fmt.Sprintf("Params | project: %s, zone: %s", project, zone))
 		if err := cmd.Help(); err != nil {
 			log.Logger.Fatal(err)
 			os.Exit(1)
@@ -52,14 +54,17 @@ func Execute() {
 	}
 }
 
+var (
+	project string
+	zone    string
+	cnfPath string
+)
+
 func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gce-commands.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVar(&project, "project", "haru256-sandbox-20250224", "GCP Project ID")
+	rootCmd.PersistentFlags().StringVarP(&zone, "zone", "z", "asia-northeast1-a", "zone or location in GCP")
+	rootCmd.PersistentFlags().StringVarP(&cnfPath, "config", "c", "gce-commands.yaml", "config file path")
 }
