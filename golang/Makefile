@@ -14,7 +14,7 @@ fmt: ## Run formatter
 
 .PHONY: init
 init: ## Initialize project
-	cobra-cli init .
+	cobra-cli init
 
 .PHONY: help
 help: ## Show options
