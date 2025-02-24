@@ -1,0 +1,30 @@
+name: lint
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**.go"
+      - ".github/workflows/lint.yml"
+  pull_request:
+    paths:
+      - "**.go"
+      - ".github/workflows/lint.yml"
+jobs:
+  golangci-lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+      - name: golangci-lint
+        uses: reviewdog/action-golangci-lint@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          golangci_lint_flags: "--config=./src/.golangci.yml ./..."
+          go_version_file: "./src/go.mod"
+          fail_on_error: true
+          reporter: "github-pr-review"
