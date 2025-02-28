@@ -16,6 +16,11 @@ fmt: ## Run formatter
 init: ## Initialize project
 	cobra-cli init
 
+.PHONY: test
+test: ## Run tests
+	go test -v ./...
+
+
 .PHONY: help
 help: ## Show options
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \

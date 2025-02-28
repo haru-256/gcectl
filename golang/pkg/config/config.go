@@ -10,13 +10,14 @@ import (
 type Config struct {
 	DefaultProject string `yaml:"default-project"`
 	DefaultZone    string `yaml:"default-zone"`
-	VMs            []VM   `yaml:"vm"`
+	VMs            []*VM  `yaml:"vm"`
 }
 
 type VM struct {
 	Name    string
 	Project string
 	Zone    string
+	Status  string
 }
 
 // ParseConfig parses the configuration file: confPath.

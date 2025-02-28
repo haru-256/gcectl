@@ -1,14 +1,17 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/haru-256/gce-commands/pkg/config"
+	"github.com/haru-256/gce-commands/pkg/gce"
 	"github.com/haru-256/gce-commands/pkg/log"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -34,16 +37,43 @@ var listCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		log.Logger.Debug(fmt.Sprintf("Config: %+v", cnf))
+		ctx := context.Background()
 
-		// TODO: get status of VMs
+		// Fetch status of VMs concurrently using errgroup
+		eg, ctx := errgroup.WithContext(ctx)
 
+		for _, vm := range cnf.VMs {
+			vm := vm // Create local variables for the goroutine, golang 1.22 will fix this
+			eg.Go(func() error {
+				status, err := gce.FetchStatus(
+					ctx,
+					vm.Project,
+					vm.Zone,
+					vm.Name,
+				)
+				if err != nil {
+					log.Logger.Errorf("Failed to get status of %s: %v", vm.Name, err)
+					vm.Status = "UNKNOWN"
+					return nil // We don't want to fail the entire operation for one VM because errorgroup will stop all goroutines
+				}
+				vm.Status = *status
+				return nil
+			})
+		}
+
+		// Wait for all goroutines to complete
+		if err := eg.Wait(); err != nil {
+			log.Logger.Error("Error fetching VM statuses:", err)
+		}
+
+		// Prepare rows for display
 		var rows [][]string
 		for _, vm := range cnf.VMs {
 			rows = append(rows, []string{
 				vm.Name,
 				vm.Project,
 				vm.Zone,
-				"Running",
+				vm.Status,
 			})
 		}
 
