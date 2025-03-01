@@ -26,7 +26,8 @@ jobs:
         uses: reviewdog/action-golangci-lint@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          golangci_lint_flags: "--config=${{ github.workspace }}/golang/.golangci.yml ./..."
-          go_version_file: "${{ github.workspace }}/golang/go.mod"
+          golangci_lint_flags: "--config=./.golangci.yml ./..."
+          go_version_file: "./go.mod"
           fail_level: "error"
           reporter: "github-pr-review"
+          workdir: "./golang"

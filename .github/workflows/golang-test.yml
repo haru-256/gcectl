@@ -26,6 +26,7 @@ jobs:
       - name: test
         run: go test ./... -coverprofile=coverage.out
       - name: report coverage
-        uses: k1LoW/octocov-action@v0
+        uses: k1LoW/octocov-action@v1
         with:
-          config: ${{ github.workspace }}/golang/.octocov.yml
+          config: ./golang/.octocov.yml
+          work-dir: "./golang"
