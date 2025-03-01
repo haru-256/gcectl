@@ -17,6 +17,7 @@ type VM struct {
 	Name           string
 	Project        string
 	Zone           string
+	MachineType    string
 	Status         string
 	SchedulePolicy string
 }

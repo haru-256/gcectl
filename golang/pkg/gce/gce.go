@@ -22,10 +22,33 @@ import (
 //   - instance: A pointer to a computepb.Instance object representing the GCE instance.
 //
 // Returns:
-//   - A string representing the current status of the instance.
+//   - A string representing the current status of the instance. if the status is empty, it returns "UNKNOWN".
 //   - An error, which is always nil in the current implementation.
 func getStatus(ctx context.Context, instance *computepb.Instance) (string, error) {
-	return *instance.Status, nil
+	status := instance.GetStatus()
+	if status == "" {
+		return "UNKNOWN", fmt.Errorf("status is missing in the instance")
+	}
+	return status, nil
+}
+
+// getMachineType retrieves the machine type of a Google Cloud Compute Engine instance.
+// If the machine type is not found, it returns "UNKNOWN" and an error.
+func getMachineType(ctx context.Context, instance *computepb.Instance) (string, error) {
+	fullURI := instance.GetMachineType()
+	if fullURI == "" {
+		return "UNKNOWN", fmt.Errorf("machine type is missing in the instance")
+	}
+
+	// Extract the machine type name from the full URL
+	pattern := `machineTypes/([^/]+)`
+	re := regexp.MustCompile(pattern)
+	matches := re.FindStringSubmatch(fullURI)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("failed to extract machineType from instance self link")
+	}
+	machineType := matches[1]
+	return machineType, nil
 }
 
 // getSchedulePolicy retrieves the schedule policy attached to a GCE instance.
@@ -172,14 +195,16 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 			}
 
 			status, err := getStatus(ctx, instance)
-			if status == "" {
-				vm.Status = "UNKNOWN"
-			} else {
-				vm.Status = status
-			}
+			vm.Status = status
 			if err != nil {
 				log.Logger.Errorf("Failed to get status: %v", err)
 				// We don't want to fail the entire operation for one VM because errorgroup will stop all goroutines
+			}
+
+			machineType, err := getMachineType(ctx, instance)
+			vm.MachineType = machineType
+			if err != nil {
+				log.Logger.Errorf("Failed to get machine-type: %v", err)
 			}
 
 			schedulePolicy, err := getSchedulePolicy(ctx, instance)
@@ -190,7 +215,6 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 			}
 			if err != nil {
 				log.Logger.Errorf("Failed to get schedule policy: %v", err)
-				// We don't want to fail the entire operation for one VM because errorgroup will stop all goroutines
 			}
 			return nil
 		})
@@ -275,6 +299,16 @@ func OnVM(vm *config.VM) error {
 
 	eg := new(errgroup.Group)
 	done := make(chan struct{})
+	defer close(done)
+	eg.Go(func() error {
+		// Wait for the operation to complete
+		if err = op.Wait(ctx); err != nil {
+			log.Logger.Errorf("failed to wait for operation: %v", err)
+			return err
+		}
+		close(done)
+		return nil
+	})
 	eg.Go(func() error {
 		// print a dot every second until the operation is done
 		for {
@@ -287,15 +321,6 @@ func OnVM(vm *config.VM) error {
 			}
 			time.Sleep(1 * time.Second)
 		}
-	})
-	eg.Go(func() error {
-		// Wait for the operation to complete
-		if err = op.Wait(ctx); err != nil {
-			log.Logger.Errorf("failed to wait for operation: %v", err)
-			return err
-		}
-		close(done)
-		return nil
 	})
 	if err = eg.Wait(); err != nil {
 		return fmt.Errorf("failed to start instance: %v", err)
@@ -331,6 +356,16 @@ func OffVM(vm *config.VM) error {
 
 	eg := new(errgroup.Group)
 	done := make(chan struct{})
+	defer close(done)
+	eg.Go(func() error {
+		// Wait for the operation to complete
+		if err = op.Wait(ctx); err != nil {
+			log.Logger.Errorf("failed to wait for operation: %v", err)
+			return err
+		}
+		close(done)
+		return nil
+	})
 	eg.Go(func() error {
 		// print a dot every second until the operation is done
 		for {
@@ -343,15 +378,6 @@ func OffVM(vm *config.VM) error {
 			}
 			time.Sleep(1 * time.Second)
 		}
-	})
-	eg.Go(func() error {
-		// Wait for the operation to complete
-		if err = op.Wait(ctx); err != nil {
-			log.Logger.Errorf("failed to wait for operation: %v", err)
-			return err
-		}
-		close(done)
-		return nil
 	})
 	if err = eg.Wait(); err != nil {
 		return fmt.Errorf("failed to stop instance: %v", err)

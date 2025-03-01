@@ -21,7 +21,7 @@ var (
 	purple = lipgloss.Color("99")
 	gray   = lipgloss.Color("#fbfcfc ")
 
-	headerStyle  = lipgloss.NewStyle().Foreground(purple).Bold(true).Align(lipgloss.Center)
+	headerStyle  = lipgloss.NewStyle().Foreground(purple).Bold(true).Align(lipgloss.Center).Padding(0, 1)
 	baseRowStyle = lipgloss.NewStyle().Padding(0, 1).Foreground(gray)
 )
 
@@ -52,6 +52,7 @@ var listCmd = &cobra.Command{
 				vm.Name,
 				vm.Project,
 				vm.Zone,
+				vm.MachineType,
 				vm.Status,
 				vm.SchedulePolicy,
 			})
@@ -61,13 +62,13 @@ var listCmd = &cobra.Command{
 		t := table.New().
 			Border(lipgloss.NormalBorder()).
 			BorderStyle(lipgloss.NewStyle().Foreground(purple)).
-			Headers("NAME", "PROJECT", "ZONE", "STATUS", "SCHEDULE").
+			Headers("Name", "Project", "Zone", "Machine-Type", "Status", "Schedule").
 			Rows(rows...).
 			StyleFunc(func(row, col int) lipgloss.Style {
 				switch {
 				case row == 0:
 					return headerStyle
-				case col == 3: // status
+				case col == 4: // status
 					return baseRowStyle.Align(lipgloss.Center)
 				default:
 					return baseRowStyle.Align(lipgloss.Left)
