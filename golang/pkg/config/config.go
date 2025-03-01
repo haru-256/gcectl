@@ -21,6 +21,16 @@ type VM struct {
 	SchedulePolicy string
 }
 
+// GetVMByName returns the VM with the given name.
+func (c *Config) GetVMByName(name string) *VM {
+	for _, vm := range c.VMs {
+		if vm.Name == name {
+			return vm
+		}
+	}
+	return nil
+}
+
 // ParseConfig parses the configuration file: confPath.
 func ParseConfig(confPath string) (*Config, error) {
 	cnf := Config{}

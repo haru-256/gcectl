@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
@@ -245,4 +246,116 @@ func getProjectFromInstance(instance *computepb.Instance) (string, error) {
 	}
 	project := matches[1]
 	return project, nil
+}
+
+func OnVM(vm *config.VM) error {
+	ctx := context.Background()
+
+	// Create a new InstancesClient with authentication
+	client, err := compute.NewInstancesRESTClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create Instances client: %v", err)
+	}
+	defer client.Close()
+
+	// Create the Start request
+	req := &computepb.StartInstanceRequest{
+		Project:  vm.Project,
+		Zone:     vm.Zone,
+		Instance: vm.Name,
+	}
+
+	// Execute the request
+	op, err := client.Start(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to start instance: %v", err)
+	}
+
+	fmt.Printf("Turn ON Instance %s\n", vm.Name)
+
+	eg := new(errgroup.Group)
+	done := make(chan struct{})
+	eg.Go(func() error {
+		// print a dot every second until the operation is done
+		for {
+			select {
+			case <-done:
+				fmt.Println()
+				return nil
+			default:
+				fmt.Print(".")
+			}
+			time.Sleep(1 * time.Second)
+		}
+	})
+	eg.Go(func() error {
+		// Wait for the operation to complete
+		if err = op.Wait(ctx); err != nil {
+			log.Logger.Errorf("failed to wait for operation: %v", err)
+			return err
+		}
+		close(done)
+		return nil
+	})
+	if err = eg.Wait(); err != nil {
+		return fmt.Errorf("failed to start instance: %v", err)
+	}
+	fmt.Printf("Instance %s started successfully\n", vm.Name)
+	return nil
+}
+
+func OffVM(vm *config.VM) error {
+	ctx := context.Background()
+
+	// Create a new InstancesClient with authentication
+	client, err := compute.NewInstancesRESTClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create Instances client: %v", err)
+	}
+	defer client.Close()
+
+	// Create the Start request
+	req := &computepb.StopInstanceRequest{
+		Project:  vm.Project,
+		Zone:     vm.Zone,
+		Instance: vm.Name,
+	}
+
+	// Execute the request
+	op, err := client.Stop(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to start instance: %v", err)
+	}
+
+	fmt.Printf("Turn OFF Instance %s\n", vm.Name)
+
+	eg := new(errgroup.Group)
+	done := make(chan struct{})
+	eg.Go(func() error {
+		// print a dot every second until the operation is done
+		for {
+			select {
+			case <-done:
+				fmt.Println()
+				return nil
+			default:
+				fmt.Print(".")
+			}
+			time.Sleep(1 * time.Second)
+		}
+	})
+	eg.Go(func() error {
+		// Wait for the operation to complete
+		if err = op.Wait(ctx); err != nil {
+			log.Logger.Errorf("failed to wait for operation: %v", err)
+			return err
+		}
+		close(done)
+		return nil
+	})
+	if err = eg.Wait(); err != nil {
+		return fmt.Errorf("failed to stop instance: %v", err)
+	}
+	fmt.Printf("Instance %s stopped successfully\n", vm.Name)
+	return nil
 }

@@ -6,7 +6,7 @@ test: ## Execute tests
 
 .PHONY: lint
 lint: ## Run Linter
-	golangci-lint run --config=./.golangci.yaml ./...
+	golangci-lint run --config=./.golangci.yml ./...
 
 .PHONY: fmt
 fmt: ## Run formatter
