@@ -1,4 +1,4 @@
-name: test
+name: golang-test
 on:
   push:
     branches:
@@ -22,10 +22,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version-file: ./go.mod
+          go-version-file: ./golang/go.mod
       - name: test
         run: go test ./... -coverprofile=coverage.out
       - name: report coverage
         uses: k1LoW/octocov-action@v0
         with:
-          config: ./.octocov.yml
+          config: ./golang/.octocov.yml

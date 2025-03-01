@@ -1,4 +1,4 @@
-name: lint
+name: golang-lint
 on:
   push:
     branches:
@@ -24,7 +24,7 @@ jobs:
         uses: reviewdog/action-golangci-lint@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          golangci_lint_flags: "--config=./.golangci.yml ./..."
-          go_version_file: "./go.mod"
+          golangci_lint_flags: "--config=./golang/.golangci.yml ./..."
+          go_version_file: "./golang/go.mod"
           fail_level: "error"
           reporter: "github-pr-review"
