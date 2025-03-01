@@ -22,10 +22,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version-file: ./golang/go.mod
+          go-version-file: ./go.mod
       - name: test
         run: go test ./... -coverprofile=coverage.out
       - name: report coverage
         uses: k1LoW/octocov-action@v0
         with:
-          config: ./golang/.octocov.yml
+          config: ./.octocov.yml
