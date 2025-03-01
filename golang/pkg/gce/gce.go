@@ -76,9 +76,9 @@ func getSchedulePolicy(ctx context.Context, instance *computepb.Instance) (strin
 			Region:         region,
 			ResourcePolicy: policyName,
 		}
-		resourcePolicy, err := policyClient.Get(ctx, policyReq)
-		if err != nil {
-			log.Logger.Errorf("Failed to get resource policy details: %v", err)
+		resourcePolicy, er := policyClient.Get(ctx, policyReq)
+		if er != nil {
+			log.Logger.Errorf("Failed to get resource policy details: %v", er)
 			continue
 		}
 		// Check if the policy has an instance schedule policy
@@ -205,6 +205,9 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 
 // getRegionFromInstance extracts the region from a Google Compute Engine instance.
 func getRegionFromInstance(instance *computepb.Instance) (string, error) {
+	if instance == nil {
+		return "", fmt.Errorf("instance is nil")
+	}
 	// Extract the zone URI from the instance
 	// https://www.googleapis.com/compute/v1/projects/{project}/zones/{zone}
 	zoneURI := instance.GetZone()

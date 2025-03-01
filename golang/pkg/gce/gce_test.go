@@ -86,7 +86,7 @@ func TestGetRegionFromInstance(t *testing.T) {
 		{
 			name: "invalid zone format",
 			instance: &computepb.Instance{
-				Zone: stringPtr("invalid-format"),
+				Zone: stringPtr("invalid format"),
 			},
 			wantRegion:  "",
 			expectError: true,

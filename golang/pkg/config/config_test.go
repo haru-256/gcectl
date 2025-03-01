@@ -10,12 +10,12 @@ import (
 func TestParseConfig(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name        string
-		configFile  string
-		configData  string
 		want        *Config
-		wantErr     bool
+		configData  string
+		configFile  string
+		name        string
 		errContains string
+		wantErr     bool
 	}{
 		{
 			name:       "valid config",
@@ -72,7 +72,7 @@ vm:
 				defer os.Remove(tmpfile.Name())
 
 				// Write test config data
-				if err := os.WriteFile(tmpfile.Name(), []byte(tt.configData), 0644); err != nil {
+				if err = os.WriteFile(tmpfile.Name(), []byte(tt.configData), 0644); err != nil {
 					t.Fatalf("failed to write config file: %v", err)
 				}
 			}
