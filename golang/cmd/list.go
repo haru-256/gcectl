@@ -11,7 +11,6 @@ import (
 	"github.com/haru-256/gce-commands/pkg/gce"
 	"github.com/haru-256/gce-commands/pkg/log"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -37,33 +36,13 @@ var listCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		log.Logger.Debug(fmt.Sprintf("Config: %+v", cnf))
+
 		ctx := context.Background()
 
-		// Fetch status of VMs concurrently using errgroup
-		eg, ctx := errgroup.WithContext(ctx)
-
-		for _, vm := range cnf.VMs {
-			vm := vm // Create local variables for the goroutine, golang 1.22 will fix this
-			eg.Go(func() error {
-				status, err := gce.FetchStatus(
-					ctx,
-					vm.Project,
-					vm.Zone,
-					vm.Name,
-				)
-				if err != nil {
-					log.Logger.Errorf("Failed to get status of %s: %v", vm.Name, err)
-					vm.Status = "UNKNOWN"
-					return nil // We don't want to fail the entire operation for one VM because errorgroup will stop all goroutines
-				}
-				vm.Status = *status
-				return nil
-			})
-		}
-
-		// Wait for all goroutines to complete
-		if err := eg.Wait(); err != nil {
-			log.Logger.Error("Error fetching VM statuses:", err)
+		// Update VMs info, such as status and schedule policy
+		if err = gce.UpdateInstancesInfo(ctx, cnf.VMs); err != nil {
+			log.Logger.Fatal(err)
+			os.Exit(1)
 		}
 
 		// Prepare rows for display
@@ -74,6 +53,7 @@ var listCmd = &cobra.Command{
 				vm.Project,
 				vm.Zone,
 				vm.Status,
+				vm.SchedulePolicy,
 			})
 		}
 
@@ -81,7 +61,7 @@ var listCmd = &cobra.Command{
 		t := table.New().
 			Border(lipgloss.NormalBorder()).
 			BorderStyle(lipgloss.NewStyle().Foreground(purple)).
-			Headers("NAME", "PROJECT", "ZONE", "STATUS").
+			Headers("NAME", "PROJECT", "ZONE", "STATUS", "SCHEDULE").
 			Rows(rows...).
 			StyleFunc(func(row, col int) lipgloss.Style {
 				switch {

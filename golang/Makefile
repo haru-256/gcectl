@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help
+.PHONY: test
 test: ## Execute tests
 	go test -race -shuffle=on ./...
 
@@ -15,10 +15,6 @@ fmt: ## Run formatter
 .PHONY: init
 init: ## Initialize project
 	cobra-cli init
-
-.PHONY: test
-test: ## Run tests
-	go test -v ./...
 
 
 .PHONY: help

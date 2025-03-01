@@ -14,10 +14,11 @@ type Config struct {
 }
 
 type VM struct {
-	Name    string
-	Project string
-	Zone    string
-	Status  string
+	Name           string
+	Project        string
+	Zone           string
+	Status         string
+	SchedulePolicy string
 }
 
 // ParseConfig parses the configuration file: confPath.

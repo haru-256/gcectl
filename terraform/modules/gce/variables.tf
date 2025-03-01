@@ -22,3 +22,9 @@ variable "vm_name" {
   type        = string
   description = "The name of the VM"
 }
+
+variable "with_stop_schedule" {
+  type        = bool
+  description = "Add resources to the GCP project"
+  default     = false
+}

@@ -10,10 +10,11 @@ module "tfstate_bucket" {
 }
 
 module "sandbox_vm" {
-  source       = "../../modules/gce"
-  project_id   = var.gcp_project_id
-  region       = var.gcp_default_region
-  zone         = var.gcp_default_zone
-  machine_type = "f1-micro"
-  vm_name      = "sandbox"
+  source             = "../../modules/gce"
+  project_id         = var.gcp_project_id
+  region             = var.gcp_default_region
+  zone               = var.gcp_default_zone
+  machine_type       = "f1-micro"
+  vm_name            = "sandbox"
+  with_stop_schedule = true
 }

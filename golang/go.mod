@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/compute v1.34.0
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/charmbracelet/log v0.4.0
+	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/sync v0.11.0

@@ -1,3 +1,7 @@
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 module "project_services" {
   source  = "terraform-google-modules/project-factory/google//modules/project_services"
   version = "~> 18.0"
@@ -59,11 +63,32 @@ resource "google_compute_subnetwork" "subnet" {
 #   target_tags   = ["iap-ssh"]
 # }
 
+resource "google_compute_resource_policy" "stop_schedule" {
+  count = var.with_stop_schedule ? 1 : 0
+
+  name    = "stop"
+  project = module.project_services.project_id
+  region  = var.region
+  instance_schedule_policy {
+    vm_stop_schedule {
+      schedule = "22 * * * *"
+    }
+    time_zone = "Asia/Tokyo"
+  }
+}
+
+# add iam to the service account for scheduling
+resource "google_project_iam_member" "compute_service_agent" {
+  project = module.project_services.project_id # Replace with your actual project ID
+  role    = "roles/compute.instanceAdmin.v1"
+  member  = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
+}
+
 # Compute Instance (VM)
 resource "google_compute_instance" "vm_instance" {
   name         = var.vm_name
   machine_type = "f1-micro"
-  project      = module.project_services.project_id
+  project      = google_project_iam_member.compute_service_agent.project
   zone         = var.zone
 
   boot_disk {
@@ -92,4 +117,6 @@ resource "google_compute_instance" "vm_instance" {
   }
 
   tags = ["iap-ssh"] # Tag to apply the firewall rule for SSH access via IAP
+
+  resource_policies = var.with_stop_schedule ? [google_compute_resource_policy.stop_schedule[0].id] : []
 }
