@@ -89,7 +89,7 @@ func getSchedulePolicy(ctx context.Context, instance *computepb.Instance) (strin
 
 	var schedulePolicyName string = ""
 	for _, policy := range policies {
-		log.Logger.Debug("Resource Policy: %s", policy)
+		log.Logger.Debugf("Resource Policy: %s", policy)
 
 		// Extract the policy name from the full URL
 		policyParts := strings.Split(policy, "/")
@@ -295,36 +295,13 @@ func OnVM(vm *config.VM) error {
 		return fmt.Errorf("failed to start instance: %v", err)
 	}
 
-	fmt.Printf("Turn ON Instance %s\n", vm.Name)
+	fmt.Printf("Turn ON Instance %s", vm.Name)
 
-	eg := new(errgroup.Group)
-	done := make(chan struct{})
-	defer close(done)
-	eg.Go(func() error {
-		// Wait for the operation to complete
-		if err = op.Wait(ctx); err != nil {
-			log.Logger.Errorf("failed to wait for operation: %v", err)
-			return err
-		}
-		close(done)
-		return nil
-	})
-	eg.Go(func() error {
-		// print a dot every second until the operation is done
-		for {
-			select {
-			case <-done:
-				fmt.Println()
-				return nil
-			default:
-				fmt.Print(".")
-			}
-			time.Sleep(1 * time.Second)
-		}
-	})
-	if err = eg.Wait(); err != nil {
+	// wait for the operation to complete
+	if err = waitOperator(ctx, op); err != nil {
 		return fmt.Errorf("failed to start instance: %v", err)
 	}
+
 	fmt.Printf("Instance %s started successfully\n", vm.Name)
 	return nil
 }
@@ -352,14 +329,155 @@ func OffVM(vm *config.VM) error {
 		return fmt.Errorf("failed to start instance: %v", err)
 	}
 
-	fmt.Printf("Turn OFF Instance %s\n", vm.Name)
+	fmt.Printf("Turn OFF Instance %s", vm.Name)
 
+	// wait for the operation to complete
+	if err = waitOperator(ctx, op); err != nil {
+		return fmt.Errorf("failed to stop instance: %v", err)
+	}
+
+	fmt.Printf("Instance %s stopped successfully\n", vm.Name)
+	return nil
+}
+
+func SetMachineType(vm *config.VM, machineType string) error {
+	ctx := context.Background()
+	// Create a new InstancesClient with authentication
+	client, err := compute.NewInstancesRESTClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create Instances client: %v", err)
+	}
+	defer client.Close()
+	// Set the new machine type
+	setMachineTypeReq := &computepb.SetMachineTypeInstanceRequest{
+		Project:  vm.Project,
+		Zone:     vm.Zone,
+		Instance: vm.Name,
+		InstancesSetMachineTypeRequestResource: &computepb.InstancesSetMachineTypeRequest{
+			MachineType: toPtr(fmt.Sprintf("zones/%s/machineTypes/%s", vm.Zone, machineType)),
+		},
+	}
+	op, err := client.SetMachineType(ctx, setMachineTypeReq)
+	if err != nil {
+		log.Logger.Errorf("Failed to set machine type: %v", err)
+		return err
+	}
+
+	fmt.Printf("Setting machine type to %s for instance %s", machineType, vm.Name)
+
+	// wait for the operation to complete
+	if err = waitOperator(ctx, op); err != nil {
+		return fmt.Errorf("failed to set machine type: %v", err)
+	}
+
+	fmt.Printf("Machine type set to %s for instance %s\n", machineType, vm.Name)
+	return nil
+}
+
+// SetSchedulePolicy attaches a schedule policy to a Google Compute Engine instance.
+func SetSchedulePolicy(vm *config.VM, policyName string) error {
+	ctx := context.Background()
+	// Create a new InstancesClient with authentication
+	client, err := compute.NewInstancesRESTClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create Instances client: %v", err)
+	}
+	defer client.Close()
+
+	instance, err := getInstance(ctx, vm.Project, vm.Zone, vm.Name)
+	if err != nil {
+		return fmt.Errorf("failed to get instance: %v", err)
+	}
+	region, err := getRegionFromInstance(instance)
+	if err != nil {
+		return fmt.Errorf("failed to get region from instance: %v", err)
+	}
+
+	policySelfLink := fmt.Sprintf("projects/%s/regions/%s/resourcePolicies/%s", vm.Project, region, policyName)
+
+	req := &computepb.AddResourcePoliciesInstanceRequest{
+		Instance: vm.Name,
+		Project:  vm.Project,
+		Zone:     vm.Zone,
+		InstancesAddResourcePoliciesRequestResource: &computepb.InstancesAddResourcePoliciesRequest{
+			ResourcePolicies: []string{policySelfLink},
+		},
+	}
+
+	op, err := client.AddResourcePolicies(ctx, req)
+	if err != nil {
+		log.Logger.Errorf("Failed to set schedule policy: %v", err)
+	}
+
+	fmt.Printf("Setting schedule policy %s for instance %s", policyName, vm.Name)
+
+	if err = waitOperator(ctx, op); err != nil {
+		return fmt.Errorf("failed to set schedule policy: %v", err)
+	}
+
+	fmt.Printf("Resource policy: %s attached to instance successfully.\n", policyName)
+
+	return nil
+}
+
+// UnsetSchedulePolicy detaches a schedule policy from a Google Compute Engine instance.
+// It removes the specified policy from the instance's list of attached policies.
+func UnsetSchedulePolicy(vm *config.VM, policyName string) error {
+	ctx := context.Background()
+	// Create a new InstancesClient with authentication
+	client, err := compute.NewInstancesRESTClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create Instances client: %v", err)
+	}
+	defer client.Close()
+
+	instance, err := getInstance(ctx, vm.Project, vm.Zone, vm.Name)
+	if err != nil {
+		return fmt.Errorf("failed to get instance: %v", err)
+	}
+	region, err := getRegionFromInstance(instance)
+	if err != nil {
+		return fmt.Errorf("failed to get region from instance: %v", err)
+	}
+
+	policySelfLink := fmt.Sprintf("projects/%s/regions/%s/resourcePolicies/%s", vm.Project, region, policyName)
+
+	req := &computepb.RemoveResourcePoliciesInstanceRequest{
+		Instance: vm.Name,
+		Project:  vm.Project,
+		Zone:     vm.Zone,
+		InstancesRemoveResourcePoliciesRequestResource: &computepb.InstancesRemoveResourcePoliciesRequest{
+			ResourcePolicies: []string{policySelfLink},
+		},
+	}
+
+	op, err := client.RemoveResourcePolicies(ctx, req)
+	if err != nil {
+		log.Logger.Errorf("Failed to unset schedule policy: %v", err)
+	}
+	fmt.Printf("Remove schedule policy %s for instance %s", policyName, vm.Name)
+
+	if err = waitOperator(ctx, op); err != nil {
+		return fmt.Errorf("failed to unset schedule policy: %v", err)
+	}
+
+	fmt.Printf("Resource policy: %s removed from instance successfully.\n", policyName)
+
+	return nil
+}
+
+func toPtr(s string) *string {
+	return &s
+}
+
+// waitOperator waits for the operation to complete and prints a dot every second until the operation is done.
+// It returns an error if the operation fails or if the context is canceled.
+func waitOperator(ctx context.Context, op *compute.Operation) error {
 	eg := new(errgroup.Group)
 	done := make(chan struct{})
-	defer close(done)
 	eg.Go(func() error {
 		// Wait for the operation to complete
-		if err = op.Wait(ctx); err != nil {
+		if err := op.Wait(ctx); err != nil {
 			log.Logger.Errorf("failed to wait for operation: %v", err)
 			return err
 		}
@@ -379,9 +497,8 @@ func OffVM(vm *config.VM) error {
 			time.Sleep(1 * time.Second)
 		}
 	})
-	if err = eg.Wait(); err != nil {
-		return fmt.Errorf("failed to stop instance: %v", err)
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("failed to wait for operation: %v", err)
 	}
-	fmt.Printf("Instance %s stopped successfully\n", vm.Name)
 	return nil
 }

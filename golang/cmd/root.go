@@ -56,7 +56,7 @@ func Execute() {
 var (
 	project string
 	zone    string
-	cnfPath string
+	CnfPath string
 )
 
 func init() {
@@ -65,7 +65,7 @@ func init() {
 	// will be global for your application.
 	RootCmd.PersistentFlags().StringVar(&project, "project", "haru256-sandbox-20250224", "GCP Project ID")
 	RootCmd.PersistentFlags().StringVarP(&zone, "zone", "z", "asia-northeast1-a", "zone or location in GCP")
-	RootCmd.PersistentFlags().StringVarP(&cnfPath, "config", "c", "~/gce-commands.yaml", "config file path")
+	RootCmd.PersistentFlags().StringVarP(&CnfPath, "config", "c", "~/gce-commands.yaml", "config file path")
 
 	// set sub command
 	RootCmd.AddCommand(set.SetCmd)

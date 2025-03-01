@@ -30,7 +30,7 @@ var listCmd = &cobra.Command{
 	Short: "List all VM in settings",
 	Long:  `All software has versions. This is Hugo's`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cnf, err := config.ParseConfig(cnfPath)
+		cnf, err := config.ParseConfig(CnfPath)
 		if err != nil {
 			log.Logger.Fatal(err)
 			os.Exit(1)

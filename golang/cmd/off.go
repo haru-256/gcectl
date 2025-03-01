@@ -30,7 +30,7 @@ Example:
 			os.Exit(1)
 		}
 		// parse config
-		cnf, err := config.ParseConfig(cnfPath)
+		cnf, err := config.ParseConfig(CnfPath)
 		if err != nil {
 			log.Logger.Fatal(err)
 			os.Exit(1)
