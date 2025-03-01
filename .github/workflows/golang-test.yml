@@ -3,7 +3,13 @@ on:
   push:
     branches:
       - "main"
+    paths:
+      - "golang/**.go"
+      - ".github/workflows/golang-test.yml"
   pull_request:
+    paths:
+      - "golang/**.go"
+      - ".github/workflows/golang-test.yml"
 env:
   CI: true
 jobs:

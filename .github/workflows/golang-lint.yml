@@ -4,12 +4,12 @@ on:
     branches:
       - main
     paths:
-      - "**.go"
-      - ".github/workflows/lint.yml"
+      - "golang/**.go"
+      - ".github/workflows/golang-lint.yml"
   pull_request:
     paths:
       - "**.go"
-      - ".github/workflows/lint.yml"
+      - ".github/workflows/golang-lint.yml"
 jobs:
   golangci-lint:
     name: golangci-lint
