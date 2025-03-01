@@ -22,21 +22,20 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/haru-256/gce-commands/cmd/set"
 	"github.com/haru-256/gce-commands/pkg/log"
 	"github.com/spf13/cobra"
 )
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// RootCmd represents the base command when called without any subcommands
+var RootCmd = &cobra.Command{
 	Use:   "gce-commands",
 	Short: "Google Compute Engine commands",
 	Long:  `Google Compute Engine commands such as listing vm and update vm-spec, add vm into stop-scheduler.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Logger.Debug("run root command")
-		log.Logger.Debug(fmt.Sprintf("Params | project: %s, zone: %s", project, zone))
 		if err := cmd.Help(); err != nil {
 			log.Logger.Fatal(err)
 			os.Exit(1)
@@ -45,9 +44,9 @@ var rootCmd = &cobra.Command{
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		log.Logger.Fatal(err)
 		os.Exit(1)
@@ -64,7 +63,10 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&project, "project", "haru256-sandbox-20250224", "GCP Project ID")
-	rootCmd.PersistentFlags().StringVarP(&zone, "zone", "z", "asia-northeast1-a", "zone or location in GCP")
-	rootCmd.PersistentFlags().StringVarP(&cnfPath, "config", "c", "~/gce-commands.yaml", "config file path")
+	RootCmd.PersistentFlags().StringVar(&project, "project", "haru256-sandbox-20250224", "GCP Project ID")
+	RootCmd.PersistentFlags().StringVarP(&zone, "zone", "z", "asia-northeast1-a", "zone or location in GCP")
+	RootCmd.PersistentFlags().StringVarP(&cnfPath, "config", "c", "~/gce-commands.yaml", "config file path")
+
+	// set sub command
+	RootCmd.AddCommand(set.SetCmd)
 }
