@@ -8,6 +8,13 @@ ignore_pr_labels = ['renovate']
 [ignore]
 glob = ['*.lock.hcl', '*.sops.yaml', '*.toml']
 
+[github_app]
+pr_commands = [
+  "/describe --pr_description.final_update_message=false",
+  "/review",
+  "/improve",
+]
+
 [pr_description]
 generate_ai_title = true
 final_update_message = true
