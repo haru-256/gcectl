@@ -470,7 +470,7 @@ func UnsetSchedulePolicy(vm *config.VM, policyName string) error {
 	fmt.Printf("Remove schedule policy %s for instance %s", policyName, vm.Name)
 
 	if err = waitOperator(ctx, op); err != nil {
-		log.Logger.Errorf("failed to unset schedule policy: %w", err)
+		log.Logger.Errorf("failed to unset schedule policy: %v", err)
 		return err
 	}
 
