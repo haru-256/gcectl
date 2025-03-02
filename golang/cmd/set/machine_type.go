@@ -7,6 +7,7 @@ import (
 	"github.com/haru-256/gce-commands/pkg/config"
 	"github.com/haru-256/gce-commands/pkg/gce"
 	"github.com/haru-256/gce-commands/pkg/log"
+	"github.com/haru-256/gce-commands/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -22,28 +23,33 @@ Example:
 		vmName := args[0]
 		machineType := args[1]
 		if machineType == "" || vmName == "" {
-			log.Logger.Error("machine-type and vm_name are required")
+			utils.ErrorReport("machine-type and vm_name are required")
 			os.Exit(1)
 		}
 		cnfPath, err := cmd.Flags().GetString("config")
 		if err != nil {
-			log.Logger.Fatal(err)
+			utils.ErrorReport("config is required")
 			os.Exit(1)
 		}
 		// parse config
 		cnf, err := config.ParseConfig(cnfPath)
 		if err != nil {
-			log.Logger.Fatal(err)
+			utils.ErrorReport(fmt.Sprintf("Failed to parse config: %v\n", err))
 			os.Exit(1)
 		}
 		log.Logger.Debug(fmt.Sprintf("Config: %+v", cnf))
 		// filter VM by name
 		vm := cnf.GetVMByName(vmName)
-		// Implement your logic here
-		if err = gce.SetMachineType(vm, machineType); err != nil {
-			log.Logger.Fatal(err)
+		if vm == nil {
+			utils.ErrorReport(fmt.Sprintf("VM %s not found", vmName))
 			os.Exit(1)
 		}
+		// Implement your logic here
+		if err = gce.SetMachineType(vm, machineType); err != nil {
+			utils.ErrorReport(fmt.Sprintf("Failed to set machine-type: %v\n", err))
+			os.Exit(1)
+		}
+		utils.SuccessReport(fmt.Sprintf("Set machine-type: %v\n", machineType))
 	},
 }
 

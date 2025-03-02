@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/charmbracelet/log"
@@ -30,6 +29,6 @@ func getLevel() log.Level {
 	case "DEBUG":
 		return log.DebugLevel
 	default:
-		panic(fmt.Sprintf("invalid log level: %s", level))
+		return 99 // No Reporting
 	}
 }

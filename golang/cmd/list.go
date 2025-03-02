@@ -10,6 +10,7 @@ import (
 	"github.com/haru-256/gce-commands/pkg/config"
 	"github.com/haru-256/gce-commands/pkg/gce"
 	"github.com/haru-256/gce-commands/pkg/log"
+	"github.com/haru-256/gce-commands/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -32,16 +33,15 @@ var listCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cnf, err := config.ParseConfig(CnfPath)
 		if err != nil {
-			log.Logger.Fatal(err)
+			utils.ErrorReport(fmt.Sprintf("Failed to parse config: %v\n", err))
 			os.Exit(1)
 		}
 		log.Logger.Debug(fmt.Sprintf("Config: %+v", cnf))
 
-		ctx := context.Background()
-
 		// Update VMs info, such as status and schedule policy
+		ctx := context.Background()
 		if err = gce.UpdateInstancesInfo(ctx, cnf.VMs); err != nil {
-			log.Logger.Fatal(err)
+			utils.ErrorReport(fmt.Sprintf("Failed to update VMs info: %v\n", err))
 			os.Exit(1)
 		}
 

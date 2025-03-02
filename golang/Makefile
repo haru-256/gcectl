@@ -26,7 +26,7 @@ init: ## Initialize project
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 GO111MODULE=on GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./bin/main -mod=vendor
+	CGO_ENABLED=0 GO111MODULE=on GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./bin/main
 
 .PHONY: help
 help: ## Show options
