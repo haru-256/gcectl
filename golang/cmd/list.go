@@ -14,10 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	RootCmd.AddCommand(listCmd)
-}
-
 var (
 	purple = lipgloss.Color("99")
 	gray   = lipgloss.Color("#fbfcfc ")
@@ -76,4 +72,8 @@ var listCmd = &cobra.Command{
 			})
 		fmt.Println(t)
 	},
+}
+
+func init() {
+	rootCmd.AddCommand(listCmd)
 }

@@ -37,7 +37,6 @@ Example:
 			os.Exit(1)
 		}
 		log.Logger.Debug(fmt.Sprintf("Config: %+v", cnf))
-
 		// filter VM by name
 		vm := cnf.GetVMByName(vmName)
 		if vm == nil {
@@ -55,5 +54,5 @@ Example:
 }
 
 func init() {
-	RootCmd.AddCommand(onCmd)
+	rootCmd.AddCommand(onCmd)
 }
