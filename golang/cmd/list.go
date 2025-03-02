@@ -62,7 +62,7 @@ var listCmd = &cobra.Command{
 			Rows(rows...).
 			StyleFunc(func(row, col int) lipgloss.Style {
 				switch {
-				case row == 0:
+				case row == table.HeaderRow:
 					return headerStyle
 				case col == 4: // status
 					return baseRowStyle.Align(lipgloss.Center)
