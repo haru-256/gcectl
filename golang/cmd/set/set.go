@@ -8,7 +8,7 @@ import (
 )
 
 var SetCmd = &cobra.Command{
-	Use:   "set",
+	Use:   "set <command>",
 	Short: "Set the machine type or schedule policy",
 	Long:  `Set the machine type or schedule policy for the application.`,
 	Run: func(cmd *cobra.Command, args []string) {

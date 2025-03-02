@@ -1,3 +1,11 @@
+ifndef GOARCH
+	GOARCH=$(shell go env GOARCH)
+endif
+
+ifndef GOOS
+	GOOS := $(shell go env GOOS)
+endif
+
 .DEFAULT_GOAL := help
 
 .PHONY: test
@@ -16,6 +24,9 @@ fmt: ## Run formatter
 init: ## Initialize project
 	cobra-cli init
 
+.PHONY: build
+build:
+	CGO_ENABLED=0 GO111MODULE=on GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./bin/main -mod=vendor
 
 .PHONY: help
 help: ## Show options

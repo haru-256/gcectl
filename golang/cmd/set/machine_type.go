@@ -16,7 +16,7 @@ var machineTypeCmd = &cobra.Command{
 	Long: `Set machine-type for the application.
 
 Example:
-  gce-commands set machine-type sandbox n1-standard-1`,
+  gce set machine-type sandbox n1-standard-1`,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		vmName := args[0]
