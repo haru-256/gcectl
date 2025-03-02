@@ -22,10 +22,12 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/haru-256/gce-commands/cmd/set"
 	"github.com/haru-256/gce-commands/pkg/log"
+	"github.com/haru-256/gce-commands/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +67,13 @@ func init() {
 	// will be global for your application.
 	RootCmd.PersistentFlags().StringVar(&project, "project", "haru256-sandbox-20250224", "GCP Project ID")
 	RootCmd.PersistentFlags().StringVarP(&zone, "zone", "z", "asia-northeast1-a", "zone or location in GCP")
-	RootCmd.PersistentFlags().StringVarP(&CnfPath, "config", "c", "~/gce-commands.yaml", "config file path")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		utils.ErrorReport(fmt.Sprintf("failed to get user home directory: %v", err))
+		os.Exit(1)
+	}
+	defaultCnfPath := home + "/gce-commands.yaml"
+	RootCmd.PersistentFlags().StringVarP(&CnfPath, "config", "c", defaultCnfPath, "config file path")
 
 	// set sub command
 	RootCmd.AddCommand(set.SetCmd)
