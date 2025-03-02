@@ -278,7 +278,8 @@ func OnVM(vm *config.VM) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create Instances client: %v", err)
+		log.Logger.Errorf("Failed to create instances client: %v", err)
+		return err
 	}
 	defer client.Close()
 
@@ -292,17 +293,18 @@ func OnVM(vm *config.VM) error {
 	// Execute the request
 	op, err := client.Start(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to start instance: %v", err)
+		log.Logger.Errorf("failed to start instance: %v", err)
+		return err
 	}
 
 	fmt.Printf("Turn ON Instance %s", vm.Name)
 
 	// wait for the operation to complete
 	if err = waitOperator(ctx, op); err != nil {
-		return fmt.Errorf("failed to start instance: %v", err)
+		log.Logger.Errorf("failed to start instance: %v", err)
+		return err
 	}
 
-	fmt.Printf("Instance %s started successfully\n", vm.Name)
 	return nil
 }
 
@@ -312,7 +314,8 @@ func OffVM(vm *config.VM) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create Instances client: %v", err)
+		log.Logger.Errorf("Failed to create instances client: %v", err)
+		return err
 	}
 	defer client.Close()
 
@@ -326,17 +329,18 @@ func OffVM(vm *config.VM) error {
 	// Execute the request
 	op, err := client.Stop(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to start instance: %v", err)
+		log.Logger.Errorf("failed to start instance: %v", err)
+		return err
 	}
 
 	fmt.Printf("Turn OFF Instance %s", vm.Name)
 
 	// wait for the operation to complete
 	if err = waitOperator(ctx, op); err != nil {
-		return fmt.Errorf("failed to stop instance: %v", err)
+		log.Logger.Errorf("failed to stop instance: %v", err)
+		return err
 	}
 
-	fmt.Printf("Instance %s stopped successfully\n", vm.Name)
 	return nil
 }
 
@@ -345,7 +349,8 @@ func SetMachineType(vm *config.VM, machineType string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create Instances client: %v", err)
+		log.Logger.Errorf("Failed to create instances client: %v", err)
+		return err
 	}
 	defer client.Close()
 	// Set the new machine type
@@ -367,10 +372,10 @@ func SetMachineType(vm *config.VM, machineType string) error {
 
 	// wait for the operation to complete
 	if err = waitOperator(ctx, op); err != nil {
-		return fmt.Errorf("failed to set machine type: %v", err)
+		log.Logger.Errorf("Failed to set machine type: %v", err)
+		return err
 	}
 
-	fmt.Printf("Machine type set to %s for instance %s\n", machineType, vm.Name)
 	return nil
 }
 
@@ -380,17 +385,20 @@ func SetSchedulePolicy(vm *config.VM, policyName string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create Instances client: %v", err)
+		log.Logger.Errorf("failed to create Instances client: %v", err)
+		return err
 	}
 	defer client.Close()
 
 	instance, err := getInstance(ctx, vm.Project, vm.Zone, vm.Name)
 	if err != nil {
-		return fmt.Errorf("failed to get instance: %v", err)
+		log.Logger.Errorf("failed to get instance: %v", err)
+		return err
 	}
 	region, err := getRegionFromInstance(instance)
 	if err != nil {
-		return fmt.Errorf("failed to get region from instance: %v", err)
+		log.Logger.Errorf("Failed to get region from instance: %v", err)
+		return err
 	}
 
 	policySelfLink := fmt.Sprintf("projects/%s/regions/%s/resourcePolicies/%s", vm.Project, region, policyName)
@@ -407,15 +415,15 @@ func SetSchedulePolicy(vm *config.VM, policyName string) error {
 	op, err := client.AddResourcePolicies(ctx, req)
 	if err != nil {
 		log.Logger.Errorf("Failed to set schedule policy: %v", err)
+		return err
 	}
 
 	fmt.Printf("Setting schedule policy %s for instance %s", policyName, vm.Name)
 
 	if err = waitOperator(ctx, op); err != nil {
-		return fmt.Errorf("failed to set schedule policy: %v", err)
+		log.Logger.Errorf("failed to set schedule policy: %v", err)
+		return err
 	}
-
-	fmt.Printf("Resource policy: %s attached to instance successfully.\n", policyName)
 
 	return nil
 }
@@ -427,17 +435,20 @@ func UnsetSchedulePolicy(vm *config.VM, policyName string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create Instances client: %v", err)
+		log.Logger.Errorf("Failed to create Instances client: %v", err)
+		return err
 	}
 	defer client.Close()
 
 	instance, err := getInstance(ctx, vm.Project, vm.Zone, vm.Name)
 	if err != nil {
-		return fmt.Errorf("failed to get instance: %v", err)
+		log.Logger.Errorf("Failed to get instance: %v", err)
+		return err
 	}
 	region, err := getRegionFromInstance(instance)
 	if err != nil {
-		return fmt.Errorf("failed to get region from instance: %v", err)
+		log.Logger.Errorf("Failed to get region from instance: %v", err)
+		return err
 	}
 
 	policySelfLink := fmt.Sprintf("projects/%s/regions/%s/resourcePolicies/%s", vm.Project, region, policyName)
@@ -454,14 +465,14 @@ func UnsetSchedulePolicy(vm *config.VM, policyName string) error {
 	op, err := client.RemoveResourcePolicies(ctx, req)
 	if err != nil {
 		log.Logger.Errorf("Failed to unset schedule policy: %v", err)
+		return err
 	}
 	fmt.Printf("Remove schedule policy %s for instance %s", policyName, vm.Name)
 
 	if err = waitOperator(ctx, op); err != nil {
-		return fmt.Errorf("failed to unset schedule policy: %v", err)
+		log.Logger.Errorf("failed to unset schedule policy: %w", err)
+		return err
 	}
-
-	fmt.Printf("Resource policy: %s removed from instance successfully.\n", policyName)
 
 	return nil
 }
@@ -473,12 +484,14 @@ func toPtr(s string) *string {
 // waitOperator waits for the operation to complete and prints a dot every second until the operation is done.
 // It returns an error if the operation fails or if the context is canceled.
 func waitOperator(ctx context.Context, op *compute.Operation) error {
+	if op == nil {
+		return fmt.Errorf("operation is nil")
+	}
 	eg := new(errgroup.Group)
 	done := make(chan struct{})
 	eg.Go(func() error {
 		// Wait for the operation to complete
 		if err := op.Wait(ctx); err != nil {
-			log.Logger.Errorf("failed to wait for operation: %v", err)
 			return err
 		}
 		close(done)

@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/haru-256/gce-commands/pkg/log"
+	"github.com/haru-256/gce-commands/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +15,7 @@ var SetCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Logger.Debug("run root command")
 		if err := cmd.Help(); err != nil {
-			log.Logger.Fatal(err)
+			utils.ErrorReport("Failed to run help command")
 			os.Exit(1)
 		}
 	},
