@@ -22,6 +22,9 @@ go install
 ## Usage
 
 ```sh
+# Describe a VM
+gce describe <vm_name>
+
 # Turn on a VM
 gce on <vm_name>
 
