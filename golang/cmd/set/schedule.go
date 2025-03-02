@@ -16,7 +16,7 @@ var scheduleCmd = &cobra.Command{
 	Long: `Set schedule-policy for the application.
 
 Example:
-  gce-commands set schedule-policy sandbox stop`,
+  gce set schedule-policy sandbox stop`,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		vmName := args[0]

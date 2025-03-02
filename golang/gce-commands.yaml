@@ -4,6 +4,6 @@ vm:
   - name: sandbox
     project: haru256-sandbox-20250225
     zone: us-central1-a
-  - name: haru256-gpu
-    project: haru256-sandbox-20250224
-    zone: asia-northeast1-a
+  # - name: haru256-gpu
+  #   project: haru256-sandbox-20250224
+  #   zone: asia-northeast1-a

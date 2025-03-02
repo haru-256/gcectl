@@ -31,7 +31,7 @@ import (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "gce-commands",
+	Use:   "gce <command>",
 	Short: "Google Compute Engine commands",
 	Long:  `Google Compute Engine commands such as listing vm and update vm-spec, add vm into stop-scheduler.`,
 	Run: func(cmd *cobra.Command, args []string) {
