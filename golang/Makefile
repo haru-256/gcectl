@@ -25,7 +25,7 @@ init: ## Initialize project
 	cobra-cli init
 
 .PHONY: build
-build:
+build: ## Build project
 	CGO_ENABLED=0 GO111MODULE=on GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./bin/main
 
 .PHONY: help
