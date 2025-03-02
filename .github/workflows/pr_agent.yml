@@ -19,7 +19,7 @@ jobs:
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CONFIG.MODEL: "o3-mini"
-          PR_DESCRIPTION.PUBLISH_LABELS: false
-          PR_REVIEW.REQUIRE_ESTIMATE_EFFORT_TO_REVIEW: false
-          PR_CODE_SUGGESTIONS.NUM_CODE_SUGGESTIONS: 6 # Increase number of code suggestions
+          config.model: "o3-mini"
+          pr_description.publish_labels: false
+          pr_review.require_estimate_effort_to_review: false
+          pr_code_suggestions.num_code_suggestions: 6 # Increase number of code suggestions
