@@ -31,7 +31,11 @@ build: ## Build project
 .PHONY: install
 install: ## Install project
 	$(MAKE) build
-	ln -sf $(PWD)/bin/main $$(HOME)/local/bin/gcectl
+	ln -sf $(PWD)/bin/main $${HOME}/.local/bin/gcectl
+
+.PHONY: completion
+completion: ./bin/main ## Generate completion
+	./bin/main completion fish > $${HOME}/.config/fish/completions/gcectl.fish
 
 .PHONY: help
 help: ## Show options
