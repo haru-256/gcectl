@@ -2,7 +2,7 @@
 # https://github.com/Codium-ai/pr-agent/blob/main/pr_agent/settings/configuration.toml
 
 [config]
-model = "o3-mini"
+model = "gpt-4o-mini"
 ignore_pr_labels = ['renovate']
 
 [ignore]
@@ -32,3 +32,4 @@ num_code_suggestions = 6
 rank_suggestions = true
 commitable_code_suggestions = true
 demand_code_suggestions_self_review = true
+summarize = false
