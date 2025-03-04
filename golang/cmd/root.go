@@ -25,17 +25,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/haru-256/gce-commands/cmd/set"
-	"github.com/haru-256/gce-commands/pkg/log"
-	"github.com/haru-256/gce-commands/pkg/utils"
+	"github.com/haru-256/gcectl/cmd/set"
+	"github.com/haru-256/gcectl/pkg/log"
+	"github.com/haru-256/gcectl/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "gce <command>",
-	Short: "Google Compute Engine commands",
-	Long:  `Google Compute Engine commands such as listing vm and update vm-spec, add vm into stop-scheduler.`,
+	Use:   "gcectl [command]",
+	Short: "Google Compute Engine commands to control VMs",
+	Long:  `Google Compute Engine commands to control VMs such as listing vm and updating vm-spec, attach vm with stop-scheduler.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Logger.Debug("run root command")
 		if err := cmd.Help(); err != nil {
@@ -56,8 +56,6 @@ func Execute() {
 }
 
 var (
-	project string
-	zone    string
 	CnfPath string
 )
 
@@ -65,14 +63,12 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&project, "project", "haru256-sandbox-20250224", "GCP Project ID")
-	rootCmd.PersistentFlags().StringVarP(&zone, "zone", "z", "asia-northeast1-a", "zone or location in GCP")
 	home, err := os.UserHomeDir()
 	if err != nil {
 		utils.ErrorReport(fmt.Sprintf("failed to get user home directory: %v", err))
 		os.Exit(1)
 	}
-	defaultCnfPath := home + "/gce-commands.yaml"
+	defaultCnfPath := home + "/.config/gcectl/config.yaml"
 	rootCmd.PersistentFlags().StringVarP(&CnfPath, "config", "c", defaultCnfPath, "config file path")
 
 	// set sub command

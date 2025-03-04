@@ -7,8 +7,8 @@ A CLI tool to simplify management of Google Cloud Compute Engine instances. This
 ### From Source
 
 ```bash
-git clone https://github.com/haru-256/gce-commands.git
-cd gce-commands/golang
+git clone https://github.com/haru-256/gcectl.git
+cd gcectl/golang
 go install
 ```
 
@@ -23,39 +23,37 @@ go install
 
 ```sh
 # Describe a VM
-gce describe <vm_name>
+gcectl describe <vm_name>
 
 # Turn on a VM
-gce on <vm_name>
+gcectl on <vm_name>
 
 # Turn off a VM
-gce off <vm_name>
+gcectl off <vm_name>
 
 # Set machine type
-gce set machine-type <vm_name> <machine-type>
-# Example: gce set machine-type sandbox n1-standard-1
+gcectl set machine-type <vm_name> <machine-type>
+# Example: gcectl set machine-type sandbox n1-standard-1
 
 # Set schedule policy
-gce set schedule-policy <vm_name> <policy_name>
-# Example: gce set schedule-policy sandbox stop
+gcectl set schedule-policy <vm_name> <policy_name>
+# Example: gcectl set schedule-policy sandbox stop
 
 # Unset schedule policy
-gce set schedule-policy <vm_name> <policy_name> --un
-# Example: gce set schedule-policy sandbox stop --un
+gcectl set schedule-policy <vm_name> <policy_name> --un
+# Example: gcectl set schedule-policy sandbox stop --un
 
 # List all VMs defined in config
-gce list
+gcectl list
 ```
 
 ### Global Flags
 
-- `--project`, `-p` - GCP Project ID (default: "haru256-sandbox-20250224")
-- `--zone`, `-z` - Zone or location in GCP (default: "asia-northeast1-a")
-- `--config`, `-c` - Config file path (default: "~/gce-commands.yaml")
+- `--config`, `-c` - Config file path (default: "~/.config/gcectl/config.yaml")
 
 ### Configuration
 
-Create a `gce-commands.yaml` file in your home directory or specify a custom location with the `--config` flag.
+Create a `config.yaml` file in your home directory or specify a custom location with the `--config` flag.
 
 #### Configuration Fields
 
@@ -99,7 +97,7 @@ golang/
 │   ├── gce/            # GCE API interaction logic
 │   ├── log/            # Logger configuration
 │   └── utils/          # Utility functions
-└── gce-commands.yaml   # Example configuration file
+└── config.yaml   # Example configuration file
 ```
 
 ### Common Issues

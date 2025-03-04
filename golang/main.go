@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/haru-256/gce-commands/cmd"
+import "github.com/haru-256/gcectl/cmd"
 
 func main() {
 	cmd.Execute()
