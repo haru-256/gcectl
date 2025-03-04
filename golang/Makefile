@@ -32,6 +32,7 @@ build: ## Build project
 install: ## Install project
 	$(MAKE) build
 	ln -sf $(PWD)/bin/main $${HOME}/.local/bin/gcectl
+	$(MAKE) completion
 
 .PHONY: completion
 completion: ./bin/main ## Generate completion
