@@ -2,7 +2,7 @@
 # https://github.com/Codium-ai/pr-agent/blob/main/pr_agent/settings/configuration.toml
 
 [config]
-model = "gpt-4o-mini"
+model = "o3-mini"
 ignore_pr_labels = ['renovate']
 
 [ignore]
