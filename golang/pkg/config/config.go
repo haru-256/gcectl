@@ -3,7 +3,7 @@ package config
 import (
 	"os"
 
-	"github.com/haru-256/gce-commands/pkg/log"
+	"github.com/haru-256/gcectl/pkg/log"
 	"gopkg.in/yaml.v3"
 )
 

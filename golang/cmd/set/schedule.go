@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/haru-256/gce-commands/pkg/config"
-	"github.com/haru-256/gce-commands/pkg/gce"
-	"github.com/haru-256/gce-commands/pkg/log"
-	"github.com/haru-256/gce-commands/pkg/utils"
+	"github.com/haru-256/gcectl/pkg/config"
+	"github.com/haru-256/gcectl/pkg/gce"
+	"github.com/haru-256/gcectl/pkg/log"
+	"github.com/haru-256/gcectl/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +17,7 @@ var scheduleCmd = &cobra.Command{
 	Long: `Set schedule-policy for the application.
 
 Example:
-  gce set schedule-policy sandbox stop`,
+  gcectl set schedule-policy sandbox stop`,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		vmName := args[0]

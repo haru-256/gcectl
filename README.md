@@ -46,7 +46,7 @@ Infrastructure as Code for creating and managing GCE resources:
 │   │   ├── log/            # Logging utilities
 │   │   └── utils/          # Utility functions
 │   ├── main.go             # CLI entry point
-│   └── gce-commands.yaml   # Configuration example
+│   └── gcectl.yaml   # Configuration example
 │
 ├── terraform/              # Terraform configurations
 │   ├── environments/       # Environment-specific configs

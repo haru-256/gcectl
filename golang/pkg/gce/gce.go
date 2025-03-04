@@ -10,8 +10,8 @@ import (
 	compute "cloud.google.com/go/compute/apiv1"
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
 	farm "github.com/dgryski/go-farm"
-	"github.com/haru-256/gce-commands/pkg/config"
-	"github.com/haru-256/gce-commands/pkg/log"
+	"github.com/haru-256/gcectl/pkg/config"
+	"github.com/haru-256/gcectl/pkg/log"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -176,7 +176,7 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 		instance, err := getInstance(ctx, vm.Project, vm.Zone, vm.Name)
 		if err != nil {
 			log.Logger.Errorf("Failed to get instance details: %v", err)
-			continue
+			return err // NOTE: We don't want to fail the entire operation for one VM
 		}
 		key := getVMKey(vm.Name, vm.Project, vm.Zone)
 		instances[key] = instance

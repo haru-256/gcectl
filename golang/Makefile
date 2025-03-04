@@ -28,6 +28,11 @@ init: ## Initialize project
 build: ## Build project
 	CGO_ENABLED=0 GO111MODULE=on GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./bin/main
 
+.PHONY: install
+install: ## Install project
+	$(MAKE) build
+	ln -sf $(PWD)/bin/main $$(HOME)/local/bin/gcectl
+
 .PHONY: help
 help: ## Show options
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \

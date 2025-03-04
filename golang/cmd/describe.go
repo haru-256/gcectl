@@ -10,10 +10,10 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/list"
-	"github.com/haru-256/gce-commands/pkg/config"
-	"github.com/haru-256/gce-commands/pkg/gce"
-	"github.com/haru-256/gce-commands/pkg/log"
-	"github.com/haru-256/gce-commands/pkg/utils"
+	"github.com/haru-256/gcectl/pkg/config"
+	"github.com/haru-256/gcectl/pkg/gce"
+	"github.com/haru-256/gcectl/pkg/log"
+	"github.com/haru-256/gcectl/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ var describeCmd = &cobra.Command{
 	Long: `Describe the instance.
 
 Example:
-  gce describe <vm_name>`,
+  gcectl describe <vm_name>`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		vmName := args[0]

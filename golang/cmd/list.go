@@ -7,10 +7,10 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/haru-256/gce-commands/pkg/config"
-	"github.com/haru-256/gce-commands/pkg/gce"
-	"github.com/haru-256/gce-commands/pkg/log"
-	"github.com/haru-256/gce-commands/pkg/utils"
+	"github.com/haru-256/gcectl/pkg/config"
+	"github.com/haru-256/gcectl/pkg/gce"
+	"github.com/haru-256/gcectl/pkg/log"
+	"github.com/haru-256/gcectl/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,10 @@ var (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all VM in settings",
-	Long:  `All software has versions. This is Hugo's`,
+	Long: `List all VM in settings.
+
+Example:
+  gcectl list`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cnf, err := config.ParseConfig(CnfPath)
 		if err != nil {
@@ -49,7 +52,7 @@ var listCmd = &cobra.Command{
 				vm.Project,
 				vm.Zone,
 				vm.MachineType,
-				vm.Status,
+				formatStatus(vm.Status),
 				vm.SchedulePolicy,
 			})
 		}
@@ -72,6 +75,17 @@ var listCmd = &cobra.Command{
 			})
 		fmt.Println(t)
 	},
+}
+
+func formatStatus(status string) string {
+	switch status {
+	case "RUNNING":
+		return "🟢(RUNNING)"
+	case "TERMINATED":
+		return "🔴(TERMINATED)"
+	default:
+		return status
+	}
 }
 
 func init() {

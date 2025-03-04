@@ -1,4 +1,4 @@
-module github.com/haru-256/gce-commands
+module github.com/haru-256/gcectl
 
 go 1.24.0
 
