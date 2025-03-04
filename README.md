@@ -1,4 +1,4 @@
-# GCE Commands
+# gcectl: Google Cloud Compute Engine Commands
 
 A project that combines a Go CLI tool for managing Google Cloud Compute Engine instances and Terraform configurations for infrastructure provisioning.
 
