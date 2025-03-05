@@ -67,8 +67,6 @@ Example:
 				switch {
 				case row == table.HeaderRow:
 					return headerStyle
-				case col == 4: // status
-					return baseRowStyle.Align(lipgloss.Center)
 				default:
 					return baseRowStyle.Align(lipgloss.Left)
 				}
