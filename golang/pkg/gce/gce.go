@@ -504,6 +504,7 @@ func waitOperator(ctx context.Context, op *compute.Operation) error {
 		for {
 			select {
 			case <-ctx.Done(): // Context canceled, exit the goroutine
+				fmt.Println() // Print newline for clean output
 				return ctx.Err()
 			case <-done: // Operation is done, exit the goroutine
 				fmt.Println() // Print newline for clean output
