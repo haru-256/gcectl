@@ -487,7 +487,7 @@ func waitOperator(ctx context.Context, op *compute.Operation) error {
 	if op == nil {
 		return fmt.Errorf("operation is nil")
 	}
-	eg := new(errgroup.Group)
+	eg, ctx := errgroup.WithContext(ctx)
 	done := make(chan struct{})
 	eg.Go(func() error {
 		// Wait for the operation to complete
@@ -498,16 +498,20 @@ func waitOperator(ctx context.Context, op *compute.Operation) error {
 		return nil
 	})
 	eg.Go(func() error {
-		// print a dot every second until the operation is done
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
 		for {
 			select {
-			case <-done:
-				fmt.Println()
+			case <-ctx.Done(): // Context canceled, exit the goroutine
+				fmt.Println() // Print newline for clean output
+				return ctx.Err()
+			case <-done: // Operation is done, exit the goroutine
+				fmt.Println() // Print newline for clean output
 				return nil
-			default:
+			case <-ticker.C: // One second has passed
 				fmt.Print(".")
 			}
-			time.Sleep(1 * time.Second)
 		}
 	})
 	if err := eg.Wait(); err != nil {
