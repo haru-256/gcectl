@@ -1,0 +1,13 @@
+[package]
+name = "gcectl"
+version = "0.1.0"
+authors = ["yohei.kuro48@gmail.com"]
+description = "A CLI tool for Google Compute Engine"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+env_logger = "0.11.7"
+log = "0.4.26"
+assert_cmd = "2"
+predicates = "3"
