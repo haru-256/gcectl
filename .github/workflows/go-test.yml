@@ -1,15 +1,15 @@
-name: golang-test
+name: go-test
 on:
   push:
     branches:
       - "main"
     paths:
-      - "golang/**.go"
-      - ".github/workflows/golang-test.yml"
+      - "go/**.go"
+      - ".github/workflows/go-test.yml"
   pull_request:
     paths:
-      - "golang/**.go"
-      - ".github/workflows/golang-test.yml"
+      - "go/**.go"
+      - ".github/workflows/go-test.yml"
 env:
   CI: true
 jobs:
@@ -17,16 +17,16 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./golang
+        working-directory: ./go
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version-file: ./golang/go.mod
+          go-version-file: ./go/go.mod
       - name: test
         run: go test ./... -coverprofile=coverage.out
       - name: report coverage
         uses: k1LoW/octocov-action@v1
         with:
           config: ./.octocov.yml
-          work-dir: "./golang"
+          work-dir: "./go"
