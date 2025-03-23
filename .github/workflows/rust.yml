@@ -1,0 +1,53 @@
+name: Rust
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "rust/**.rs"
+      - ".github/workflows/rust.yml"
+  pull_request:
+    paths:
+      - "rust/**.rs"
+      - ".github/workflows/rust.yml"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: rust-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./rust
+    steps:
+      - name: Check out code into the Rust module directory
+        uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy
+      - name: check
+        run: cargo check
+      - name: clippy
+        run: cargo clippy
+
+  test:
+    name: rust-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./rust
+    steps:
+      - name: Check out code into the Rust module directory
+        uses: actions/checkout@v4
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run tests
+        run: cargo test --verbose
