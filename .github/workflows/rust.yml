@@ -22,7 +22,7 @@ jobs:
       run:
         working-directory: ./rust
     steps:
-      - name: Check out code into the Go module directory
+      - name: Check out code into the Rust module directory
         uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -33,12 +33,13 @@ jobs:
         run: cargo clippy
 
   test:
+    name: rust-test
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./rust
     steps:
-      - name: Check out code into the Go module directory
+      - name: Check out code into the Rust module directory
         uses: actions/checkout@v4
       - name: Cache
         uses: actions/cache@v4
