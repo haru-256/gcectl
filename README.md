@@ -28,7 +28,7 @@ Infrastructure as Code for creating and managing GCE resources:
 * Schedule policy management
 * State management setup
 
-## Directory Structure
+*## Directory Structure
 
 ```sh
 .
@@ -36,7 +36,7 @@ Infrastructure as Code for creating and managing GCE resources:
 │   ├── workflows/          # GitHub Actions workflows
 │   └── pull_request_template.md
 │
-├── golang/                 # Go CLI tool source code
+├── go/                     # Go CLI tool source code
 │   ├── cmd/                # Command implementations
 │   │   ├── list.go         # VM listing command
 │   │   ├── off.go          # VM shutdown command
@@ -63,3 +63,4 @@ Infrastructure as Code for creating and managing GCE resources:
 ```
 
 The Go CLI tool provides a convenient interface for managing GCE instances, while the Terraform configurations enable infrastructure provisioning and management following best practices.
+*
