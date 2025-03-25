@@ -1,5 +1,8 @@
 # gcectl: Google Cloud Compute Engine Commands
 
+[![Go CI](https://github.com/haru-256/gcectl/actions/workflows/go.yml/badge.svg)](https://github.com/haru-256/gcectl/actions/workflows/go.yml)
+[![Rust](https://github.com/haru-256/gcectl/actions/workflows/rust.yml/badge.svg)](https://github.com/haru-256/gcectl/actions/workflows/rust.yml)
+
 A project that combines a Go CLI tool for managing Google Cloud Compute Engine instances and Terraform configurations for infrastructure provisioning.
 
 ## Description

@@ -1,5 +1,7 @@
 # gcectl: Google Cloud Compute Engine Commands
 
+[![Go CI](https://github.com/haru-256/gcectl/actions/workflows/go.yml/badge.svg)](https://github.com/haru-256/gcectl/actions/workflows/go.yml)
+
 A CLI tool to simplify management of Google Cloud Compute Engine instances. This tool provides convenient shortcuts for common GCE operations like starting/stopping VMs, changing machine types, and setting scheduling policies.
 
 ## Installation
