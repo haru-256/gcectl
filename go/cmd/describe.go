@@ -4,9 +4,10 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/list"
@@ -48,7 +49,8 @@ Example:
 		}
 		// Describe the instance
 		// Update VMs info, such as status and schedule policy
-		ctx := context.Background()
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
 		if err = gce.UpdateInstancesInfo(ctx, []*config.VM{vm}); err != nil {
 			utils.ErrorReport(fmt.Sprintf("Failed to update VMs info: %v\n", err))
 			os.Exit(1)

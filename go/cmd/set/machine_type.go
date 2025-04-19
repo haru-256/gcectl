@@ -3,6 +3,8 @@ package set
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/haru-256/gcectl/pkg/config"
 	"github.com/haru-256/gcectl/pkg/gce"
@@ -44,8 +46,10 @@ Example:
 			utils.ErrorReport(fmt.Sprintf("VM %s not found", vmName))
 			os.Exit(1)
 		}
-		// Implement your logic here
-		if err = gce.SetMachineType(vm, machineType); err != nil {
+
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		if err = gce.SetMachineType(ctx, vm, machineType); err != nil {
 			utils.ErrorReport(fmt.Sprintf("Failed to set machine-type: %v\n", err))
 			os.Exit(1)
 		}

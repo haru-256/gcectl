@@ -6,6 +6,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/haru-256/gcectl/pkg/config"
 	"github.com/haru-256/gcectl/pkg/gce"
@@ -46,7 +48,9 @@ Example:
 		}
 
 		// Turn off the instance
-		if err = gce.OffVM(vm); err != nil {
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		if err = gce.OffVM(ctx, vm); err != nil {
 			utils.ErrorReport(fmt.Sprintf("Failed to turn off the instance: %v\n", err))
 			os.Exit(1)
 		}
