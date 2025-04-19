@@ -1,19 +1,11 @@
 # TODO: Add more linters
 # https://gist.githubusercontent.com/maratori/47a4d00457a92aa426dbd48a18776322/raw/43d6de07ca238a3994737171bd3fe2cd2b769bc0/.golangci.yml
 
-linters-settings:
-  govet:
-    enable-all: true
-    settings:
-      shadow:
-        strict: true
-  gocyclo:
-    min-complexity: 30
-  misspell:
-    locale: US
+version: "2"
 
 linters:
-  disable-all: true
+  # disable-all: true
+  default: none
   enable:
     - goimports
     - unused
@@ -25,3 +17,14 @@ linters:
     - misspell
     - staticcheck
     - whitespace
+
+  settings:
+    govet:
+      enable-all: true
+      settings:
+        shadow:
+          strict: true
+    gocyclo:
+      min-complexity: 30
+    misspell:
+      locale: US

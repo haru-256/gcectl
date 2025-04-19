@@ -36,10 +36,11 @@ func TestGetSchedulePolicy(t *testing.T) {
 	// Call the function
 	ctx := context.Background()
 	instance, err := getInstance(ctx, projectID, zone, instanceName)
+	assert.NoError(t, err)
 	policy, err := getSchedulePolicy(ctx, instance)
+	assert.NoError(t, err)
 
 	// Check results
-	assert.NoError(t, err)
 	assert.NotEmpty(t, policy)
 }
 
