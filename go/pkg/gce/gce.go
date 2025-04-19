@@ -272,9 +272,7 @@ func getProjectFromInstance(instance *computepb.Instance) (string, error) {
 	return project, nil
 }
 
-func OnVM(vm *config.VM) error {
-	ctx := context.Background()
-
+func OnVM(ctx context.Context, vm *config.VM) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
@@ -308,9 +306,7 @@ func OnVM(vm *config.VM) error {
 	return nil
 }
 
-func OffVM(vm *config.VM) error {
-	ctx := context.Background()
-
+func OffVM(ctx context.Context, vm *config.VM) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
@@ -344,8 +340,7 @@ func OffVM(vm *config.VM) error {
 	return nil
 }
 
-func SetMachineType(vm *config.VM, machineType string) error {
-	ctx := context.Background()
+func SetMachineType(ctx context.Context, vm *config.VM, machineType string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
@@ -380,8 +375,7 @@ func SetMachineType(vm *config.VM, machineType string) error {
 }
 
 // SetSchedulePolicy attaches a schedule policy to a Google Compute Engine instance.
-func SetSchedulePolicy(vm *config.VM, policyName string) error {
-	ctx := context.Background()
+func SetSchedulePolicy(ctx context.Context, vm *config.VM, policyName string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
@@ -430,8 +424,7 @@ func SetSchedulePolicy(vm *config.VM, policyName string) error {
 
 // UnsetSchedulePolicy detaches a schedule policy from a Google Compute Engine instance.
 // It removes the specified policy from the instance's list of attached policies.
-func UnsetSchedulePolicy(vm *config.VM, policyName string) error {
-	ctx := context.Background()
+func UnsetSchedulePolicy(ctx context.Context, vm *config.VM, policyName string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {

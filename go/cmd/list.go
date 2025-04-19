@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
@@ -38,7 +39,8 @@ Example:
 		log.Logger.Debug(fmt.Sprintf("Config: %+v", cnf))
 
 		// Update VMs info, such as status and schedule policy
-		ctx := context.Background()
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
 		if err = gce.UpdateInstancesInfo(ctx, cnf.VMs); err != nil {
 			utils.ErrorReport(fmt.Sprintf("Failed to update VMs info: %v\n", err))
 			os.Exit(1)

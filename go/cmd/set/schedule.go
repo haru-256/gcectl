@@ -3,6 +3,8 @@ package set
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/haru-256/gcectl/pkg/config"
 	"github.com/haru-256/gcectl/pkg/gce"
@@ -44,10 +46,12 @@ Example:
 			utils.ErrorReport(fmt.Sprintf("VM %s not found", vmName))
 			os.Exit(1)
 		}
-		// Implement your logic here
+
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
 		if unset {
 			log.Logger.Debug("Unset schedule-policy")
-			if err = gce.UnsetSchedulePolicy(vm, policyName); err != nil {
+			if err = gce.UnsetSchedulePolicy(ctx, vm, policyName); err != nil {
 				fmt.Printf("Failed to unset schedule-policy: %v\n", err)
 				utils.ErrorReport(fmt.Sprintf("Failed to unset schedule-policy: %v\n", err))
 				os.Exit(1)
@@ -56,7 +60,7 @@ Example:
 			}
 		} else {
 			log.Logger.Debug("Set schedule-policy")
-			if err = gce.SetSchedulePolicy(vm, policyName); err != nil {
+			if err = gce.SetSchedulePolicy(ctx, vm, policyName); err != nil {
 				utils.ErrorReport(fmt.Sprintf("Failed to set schedule-policy: %v\n", err))
 				os.Exit(1)
 			} else {
