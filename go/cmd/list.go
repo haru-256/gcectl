@@ -38,8 +38,6 @@ Example:
 		}
 		log.Logger.Debug(fmt.Sprintf("Config: %+v", cnf))
 
-		a
-
 		// Update VMs info, such as status and schedule policy
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
