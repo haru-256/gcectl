@@ -7,12 +7,10 @@ linters:
   # disable-all: true
   default: none
   enable:
-    - goimports
     - unused
     - errcheck
     - gocognit
     - gocyclo
-    - gofmt
     - govet
     - misspell
     - staticcheck
@@ -28,3 +26,8 @@ linters:
       min-complexity: 30
     misspell:
       locale: US
+
+formatters:
+  enable:
+    - goimports
+    - gofmt
