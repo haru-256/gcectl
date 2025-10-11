@@ -3,8 +3,8 @@ package set
 import (
 	"os"
 
-	"github.com/haru-256/gcectl/pkg/log"
-	"github.com/haru-256/gcectl/pkg/utils"
+	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/spf13/cobra"
 )
 
@@ -17,9 +17,10 @@ Example:
   gcectl set machine-type sandbox n1-standard-1
   gcectl set schedule-policy sandbox stop`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Logger.Debug("run root command")
+		console := presenter.NewConsolePresenter()
+		infraLog.DefaultLogger.Debugf("run root command")
 		if err := cmd.Help(); err != nil {
-			utils.ErrorReport("Failed to run help command")
+			console.Error("Failed to run help command")
 			os.Exit(1)
 		}
 	},
