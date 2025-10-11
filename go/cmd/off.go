@@ -60,7 +60,7 @@ Example:
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		fmt.Printf("Stopping VM %s", vmName)
+		console.ProgressStart(fmt.Sprintf("Stopping VM %s", vmName))
 		if err = stopVMUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name); err != nil {
 			console.ProgressDone()
 			console.Error(fmt.Sprintf("Failed to turn off the instance: %v\n", err))

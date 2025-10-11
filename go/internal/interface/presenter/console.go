@@ -71,6 +71,25 @@ func (p *ConsolePresenter) Error(msg string) {
 	fmt.Println(p.errorStyle.Render("[ERROR] | ") + msg)
 }
 
+// ProgressStart prints a progress message without a newline.
+// This is typically called at the start of long-running operations.
+//
+// The message is displayed as-is, allowing the Progress() method to add
+// dots on the same line, followed by ProgressDone() to complete the line.
+//
+// Parameters:
+//   - msg: The progress message to display (e.g., "Starting VM my-vm")
+//
+// Example:
+//
+//	presenter.ProgressStart("Starting VM my-vm")
+//	// ... operation in progress, Progress() called multiple times ...
+//	presenter.ProgressDone()
+//	// Output: Starting VM my-vm...
+func (p *ConsolePresenter) ProgressStart(msg string) {
+	fmt.Print(msg)
+}
+
 // Progress prints a progress indicator (dot) without a newline.
 // This is typically called periodically during long-running operations.
 //

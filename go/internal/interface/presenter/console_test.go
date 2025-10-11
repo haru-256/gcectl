@@ -114,6 +114,29 @@ func TestConsolePresenter_ProgressDone(t *testing.T) {
 	}
 }
 
+func TestConsolePresenter_ProgressStart(t *testing.T) {
+	presenter := NewConsolePresenter()
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	message := "Starting VM test-vm"
+	presenter.ProgressStart(message)
+
+	_ = w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	output := buf.String()
+
+	if output != message {
+		t.Errorf("ProgressStart() output = %q, want %q", output, message)
+	}
+}
+
 func TestConsolePresenter_ProgressSequence(t *testing.T) {
 	presenter := NewConsolePresenter()
 
@@ -138,6 +161,33 @@ func TestConsolePresenter_ProgressSequence(t *testing.T) {
 	expected := "...\n"
 	if output != expected {
 		t.Errorf("Progress sequence output = %q, want %q", output, expected)
+	}
+}
+
+func TestConsolePresenter_ProgressStartWithSequence(t *testing.T) {
+	presenter := NewConsolePresenter()
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// Simulate a complete progress sequence with start message
+	presenter.ProgressStart("Starting VM test-vm")
+	presenter.Progress()
+	presenter.Progress()
+	presenter.ProgressDone()
+
+	_ = w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	output := buf.String()
+
+	expected := "Starting VM test-vm..\n"
+	if output != expected {
+		t.Errorf("Progress start + sequence output = %q, want %q", output, expected)
 	}
 }
 

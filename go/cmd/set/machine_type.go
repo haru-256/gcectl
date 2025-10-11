@@ -61,14 +61,14 @@ Example:
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		fmt.Printf("Updating machine type for VM %s", vmName)
+		console.ProgressStart(fmt.Sprintf("Updating machine type for VM %s", vmName))
 		if err = updateMachineTypeUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, machineType); err != nil {
 			console.ProgressDone()
 			console.Error(fmt.Sprintf("Failed to set machine-type: %v\n", err))
 			os.Exit(1)
 		}
 		console.ProgressDone()
-		console.Success(fmt.Sprintf("Set machine-type: %v\n", machineType))
+		console.Success(fmt.Sprintf("Set machine-type to %v\n", machineType))
 	},
 }
 

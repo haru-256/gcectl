@@ -63,7 +63,7 @@ Example:
 		if unset {
 			infraLog.DefaultLogger.Debugf("Unset schedule-policy")
 			unsetSchedulePolicyUseCase := usecase.NewUnsetSchedulePolicyUseCase(vmRepo)
-			fmt.Printf("Unsetting schedule policy for VM %s", vmName)
+			console.ProgressStart(fmt.Sprintf("Unsetting schedule policy for VM %s", vmName))
 			if err = unsetSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName); err != nil {
 				console.ProgressDone()
 				console.Error(fmt.Sprintf("Failed to unset schedule-policy: %v\n", err))
@@ -74,7 +74,7 @@ Example:
 		} else {
 			infraLog.DefaultLogger.Debugf("Set schedule-policy")
 			setSchedulePolicyUseCase := usecase.NewSetSchedulePolicyUseCase(vmRepo)
-			fmt.Printf("Setting schedule policy for VM %s", vmName)
+			console.ProgressStart(fmt.Sprintf("Setting schedule policy for VM %s", vmName))
 			if err = setSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName); err != nil {
 				console.ProgressDone()
 				console.Error(fmt.Sprintf("Failed to set schedule-policy: %v\n", err))
