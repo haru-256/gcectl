@@ -147,7 +147,7 @@ func getInstance(ctx context.Context, projectID, zone, instanceName string) (*co
 	// Create a new ResourcePolicies client
 	policyClient, err := compute.NewResourcePoliciesRESTClient(ctx)
 	if err != nil {
-		log.Logger.Errorf("Failed to create Instances client: %v", err)
+log.Logger.Errorf("Failed to create ResourcePolicies client: %v", err)
 		return nil, err
 	}
 	defer func() {
