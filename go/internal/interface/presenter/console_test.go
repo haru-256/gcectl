@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 )
@@ -73,9 +72,8 @@ func TestConsolePresenter_Error(t *testing.T) {
 
 func TestConsolePresenter_RenderVMList(t *testing.T) {
 	presenter := NewConsolePresenter()
-	startTime := time.Date(2025, 10, 11, 10, 0, 0, 0, time.UTC)
 
-	vms := []*model.VM{
+	items := []VMListItem{
 		{
 			Name:           "vm1",
 			Project:        "project1",
@@ -83,7 +81,7 @@ func TestConsolePresenter_RenderVMList(t *testing.T) {
 			MachineType:    "e2-medium",
 			Status:         model.StatusRunning,
 			SchedulePolicy: "policy1",
-			LastStartTime:  &startTime,
+			Uptime:         "2h30m15s",
 		},
 		{
 			Name:           "vm2",
@@ -92,7 +90,7 @@ func TestConsolePresenter_RenderVMList(t *testing.T) {
 			MachineType:    "n1-standard-1",
 			Status:         model.StatusStopped,
 			SchedulePolicy: "",
-			LastStartTime:  nil,
+			Uptime:         "N/A",
 		},
 	}
 
@@ -101,7 +99,7 @@ func TestConsolePresenter_RenderVMList(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	presenter.RenderVMList(vms)
+	presenter.RenderVMList(items)
 
 	_ = w.Close()
 	os.Stdout = old
@@ -126,18 +124,28 @@ func TestConsolePresenter_RenderVMList(t *testing.T) {
 			t.Errorf("RenderVMList() output doesn't contain header '%s'", header)
 		}
 	}
+
+	// Check that uptime values appear
+	if !strings.Contains(output, "2h30m15s") {
+		t.Errorf("RenderVMList() output doesn't contain uptime '2h30m15s'")
+	}
+
+	if !strings.Contains(output, "N/A") {
+		t.Errorf("RenderVMList() output doesn't contain uptime 'N/A'")
+	}
 }
 
 func TestConsolePresenter_RenderVMDetail(t *testing.T) {
 	presenter := NewConsolePresenter()
 
-	vm := &model.VM{
+	detail := VMDetail{
 		Name:           "test-vm",
 		Project:        "test-project",
 		Zone:           "us-central1-a",
 		MachineType:    "e2-medium",
 		Status:         model.StatusRunning,
 		SchedulePolicy: "test-policy",
+		Uptime:         "2h30m",
 	}
 
 	// Capture stdout
@@ -145,7 +153,7 @@ func TestConsolePresenter_RenderVMDetail(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	presenter.RenderVMDetail(vm)
+	presenter.RenderVMDetail(detail)
 
 	_ = w.Close()
 	os.Stdout = old
@@ -162,12 +170,57 @@ func TestConsolePresenter_RenderVMDetail(t *testing.T) {
 		"e2-medium",
 		"RUNNING",
 		"test-policy",
+		"2h30m",
 	}
 
 	for _, field := range expectedFields {
 		if !strings.Contains(output, field) {
 			t.Errorf("RenderVMDetail() output doesn't contain '%s'", field)
 		}
+	}
+}
+
+func TestGetStatusEmoji(t *testing.T) {
+	//nolint:govet // Test struct prioritizes readability over field alignment
+	tests := []struct {
+		name   string
+		status model.Status
+		want   string
+	}{
+		{
+			name:   "running status",
+			status: model.StatusRunning,
+			want:   "🟢",
+		},
+		{
+			name:   "stopped status",
+			status: model.StatusStopped,
+			want:   "🔴",
+		},
+		{
+			name:   "terminated status",
+			status: model.StatusTerminated,
+			want:   "🔴",
+		},
+		{
+			name:   "provisioning status",
+			status: model.StatusProvisioning,
+			want:   "⚪",
+		},
+		{
+			name:   "unknown status",
+			status: model.StatusUnknown,
+			want:   "⚪",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getStatusEmoji(tt.status)
+			if got != tt.want {
+				t.Errorf("getStatusEmoji(%v) = %v, want %v", tt.status, got, tt.want)
+			}
+		})
 	}
 }
 

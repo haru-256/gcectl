@@ -13,6 +13,7 @@ import (
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
+	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
 )
 
@@ -56,14 +57,22 @@ Example:
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		vmDetail, err := vmRepo.FindByName(ctx, vm.Project, vm.Zone, vm.Name)
+		vmDetail, uptimeStr, err := usecase.DescribeVM(ctx, vmRepo, vm.Project, vm.Zone, vm.Name)
 		if err != nil {
 			console.Error(fmt.Sprintf("Failed to get VM info: %v\n", err))
 			os.Exit(1)
 		}
 
 		// Render VM detail
-		console.RenderVMDetail(vmDetail)
+		console.RenderVMDetail(presenter.VMDetail{
+			Name:           vmDetail.Name,
+			Project:        vmDetail.Project,
+			Zone:           vmDetail.Zone,
+			MachineType:    vmDetail.MachineType,
+			Status:         vmDetail.Status,
+			SchedulePolicy: vmDetail.SchedulePolicy,
+			Uptime:         uptimeStr,
+		})
 	},
 }
 

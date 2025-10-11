@@ -317,14 +317,20 @@ func (r *VMRepositoryImpl) toModel(ctx context.Context, instance *computepb.Inst
 	}
 
 	// Extract project and zone from instance
-	project, _ := extractProject(instance.GetSelfLink())
-	zone, _ := extractZone(instance.GetZone())
+	project, err := extractProject(instance.GetSelfLink())
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract project from instance: %w", err)
+	}
+	zone, err := extractZone(instance.GetZone())
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract zone from instance: %w", err)
+	}
 	vm.Project = project
 	vm.Zone = zone
 
 	// Parse start time
 	if startTimeStr := instance.GetLastStartTimestamp(); startTimeStr != "" {
-		if startTime, err := time.Parse(time.RFC3339, startTimeStr); err == nil {
+		if startTime, parseErr := time.Parse(time.RFC3339, startTimeStr); parseErr == nil {
 			vm.LastStartTime = &startTime
 		}
 	}

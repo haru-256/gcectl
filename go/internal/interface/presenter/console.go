@@ -2,7 +2,6 @@ package presenter
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/list"
@@ -72,6 +71,52 @@ func (p *ConsolePresenter) Error(msg string) {
 	fmt.Println(p.errorStyle.Render("[ERROR] | ") + msg)
 }
 
+// VMListItem represents a VM instance for list view display.
+// This type is used to decouple the presenter layer from domain models,
+// allowing the presentation logic to receive pre-formatted data.
+//
+//nolint:govet // Field order optimized for readability over memory alignment
+type VMListItem struct {
+	Name           string
+	Project        string
+	Zone           string
+	MachineType    string
+	Status         model.Status
+	SchedulePolicy string
+	Uptime         string // Pre-calculated uptime string (e.g., "2h30m", "N/A")
+}
+
+// VMDetail is an alias for VMListItem since they have identical structure.
+// This improves code clarity by using different names for different contexts,
+// while avoiding duplication of the type definition.
+type VMDetail = VMListItem
+
+// getStatusEmoji returns an emoji representation of a VM status.
+//
+// This helper function centralizes the status-to-emoji mapping logic,
+// ensuring consistent status indicators across different display formats.
+//
+// Parameters:
+//   - status: The VM status to get an emoji for
+//
+// Returns:
+//   - string: Emoji representing the status (🟢 for RUNNING, 🔴 for STOPPED/TERMINATED, ⚪ for others)
+//
+// Example:
+//
+//	emoji := getStatusEmoji(model.StatusRunning)
+//	// Returns: "🟢"
+func getStatusEmoji(status model.Status) string {
+	switch status.String() {
+	case "RUNNING":
+		return "🟢"
+	case "STOPPED", "TERMINATED":
+		return "🔴"
+	default:
+		return "⚪"
+	}
+}
+
 // RenderVMList renders a list of VMs in a formatted table.
 //
 // The table includes the following columns:
@@ -83,8 +128,11 @@ func (p *ConsolePresenter) Error(msg string) {
 //   - Schedule: Attached schedule policy name (if any)
 //   - Uptime: How long the VM has been running (for RUNNING VMs only)
 //
+// The uptime string is expected to be pre-calculated by the use case layer,
+// keeping business logic out of the presentation layer.
+//
 // Parameters:
-//   - vms: Slice of VM instances to render
+//   - items: Slice of VMListItem with VMs and their pre-calculated uptime strings
 //
 // Example output:
 //
@@ -93,33 +141,20 @@ func (p *ConsolePresenter) Error(msg string) {
 //	├──────────┼────────────┼──────────────┼──────────────┼─────────────┼──────────┼─────────┤
 //	│ my-vm    │ my-project │ us-central1-a│ e2-medium    │ 🟢 RUNNING  │ policy-1 │ 2h30m   │
 //	└──────────┴────────────┴──────────────┴──────────────┴─────────────┴──────────┴─────────┘
-func (p *ConsolePresenter) RenderVMList(vms []*model.VM) {
+func (p *ConsolePresenter) RenderVMList(items []VMListItem) {
 	var rows [][]string
-	now := time.Now()
 
-	for _, vm := range vms {
-		uptime := "N/A"
-		if vm.LastStartTime != nil && vm.Status.String() == "RUNNING" {
-			duration := now.Sub(*vm.LastStartTime)
-			uptime = duration.String()
-		}
-
-		statusEmoji := "⚪"
-		switch vm.Status.String() {
-		case "RUNNING":
-			statusEmoji = "🟢"
-		case "STOPPED", "TERMINATED":
-			statusEmoji = "🔴"
-		}
+	for _, item := range items {
+		statusEmoji := getStatusEmoji(item.Status)
 
 		rows = append(rows, []string{
-			vm.Name,
-			vm.Project,
-			vm.Zone,
-			vm.MachineType,
-			statusEmoji + " " + vm.Status.String(),
-			vm.SchedulePolicy,
-			uptime,
+			item.Name,
+			item.Project,
+			item.Zone,
+			item.MachineType,
+			statusEmoji + " " + item.Status.String(),
+			item.SchedulePolicy,
+			item.Uptime,
 		})
 	}
 
@@ -149,11 +184,12 @@ func (p *ConsolePresenter) RenderVMList(vms []*model.VM) {
 //   - MachineType: VM machine type
 //   - Status: Current operational status
 //   - SchedulePolicy: Attached schedule policy (if any)
+//   - Uptime: How long the VM has been running (for RUNNING VMs only)
 //
 // All fields are aligned for readability with bullet points.
 //
 // Parameters:
-//   - vm: The VM instance to render details for
+//   - detail: The VM detail information with pre-calculated uptime string
 //
 // Example output:
 //
@@ -163,7 +199,8 @@ func (p *ConsolePresenter) RenderVMList(vms []*model.VM) {
 //   - MachineType   : e2-medium
 //   - Status        : RUNNING
 //   - SchedulePolicy: my-schedule-policy
-func (p *ConsolePresenter) RenderVMDetail(vm *model.VM) {
+//   - Uptime        : 2h30m
+func (p *ConsolePresenter) RenderVMDetail(detail VMDetail) {
 	listItemsHeader := []string{
 		"Name",
 		"Project",
@@ -171,16 +208,18 @@ func (p *ConsolePresenter) RenderVMDetail(vm *model.VM) {
 		"MachineType",
 		"Status",
 		"SchedulePolicy",
+		"Uptime",
 	}
 	itemPaddings := getItemPaddings(listItemsHeader)
 
 	l := list.New(
-		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[0]), itemPaddings[0], vm.Name),
-		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[1]), itemPaddings[1], vm.Project),
-		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[2]), itemPaddings[2], vm.Zone),
-		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[3]), itemPaddings[3], vm.MachineType),
-		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[4]), itemPaddings[4], vm.Status.String()),
-		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[5]), itemPaddings[5], vm.SchedulePolicy),
+		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[0]), itemPaddings[0], detail.Name),
+		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[1]), itemPaddings[1], detail.Project),
+		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[2]), itemPaddings[2], detail.Zone),
+		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[3]), itemPaddings[3], detail.MachineType),
+		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[4]), itemPaddings[4], detail.Status.String()),
+		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[5]), itemPaddings[5], detail.SchedulePolicy),
+		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[6]), itemPaddings[6], detail.Uptime),
 	).Enumerator(list.Bullet).EnumeratorStyle(lipgloss.NewStyle().Padding(0, 1))
 
 	fmt.Println(l)
