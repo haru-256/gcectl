@@ -6,21 +6,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
-	"github.com/haru-256/gcectl/pkg/config"
-	"github.com/haru-256/gcectl/pkg/gce"
-	"github.com/haru-256/gcectl/pkg/log"
-	"github.com/haru-256/gcectl/pkg/utils"
+	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
+	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/presenter"
+	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
-)
-
-var (
-	purple = lipgloss.Color("99")
-	gray   = lipgloss.Color("#fbfcfc ")
-
-	headerStyle  = lipgloss.NewStyle().Foreground(purple).Bold(true).Align(lipgloss.Center).Padding(0, 1)
-	baseRowStyle = lipgloss.NewStyle().Padding(0, 1).Foreground(gray)
 )
 
 var listCmd = &cobra.Command{
@@ -31,50 +21,39 @@ var listCmd = &cobra.Command{
 Example:
   gcectl list`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cnf, err := config.ParseConfig(CnfPath)
-		if err != nil {
-			utils.ErrorReport(fmt.Sprintf("Failed to parse config: %v\n", err))
-			os.Exit(1)
-		}
-		log.Logger.Debug(fmt.Sprintf("Config: %+v", cnf))
+		// 依存性の注入
+		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
+		console := presenter.NewConsolePresenter()
+		listVMsUC := usecase.NewListVMsUseCase(vmRepo)
 
-		// Update VMs info, such as status and schedule policy
+		// List VMs
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
-		if err = gce.UpdateInstancesInfo(ctx, cnf.VMs); err != nil {
-			utils.ErrorReport(fmt.Sprintf("Failed to update VMs info: %v\n", err))
+
+		items, err := listVMsUC.Execute(ctx)
+		if err != nil {
+			console.Error(fmt.Sprintf("Failed to list VMs: %v\n", err))
 			os.Exit(1)
 		}
 
-		// Prepare rows for display
-		var rows [][]string
-		for _, vm := range cnf.VMs {
-			rows = append(rows, []string{
-				vm.Name,
-				vm.Project,
-				vm.Zone,
-				vm.MachineType,
-				vm.Status.Render(),
-				vm.SchedulePolicy,
-				vm.Uptime,
-			})
+		infraLog.DefaultLogger.Debugf("Found %d VMs", len(items))
+
+		// Convert usecase items to presenter items
+		presenterItems := make([]presenter.VMListItem, len(items))
+		for i, item := range items {
+			presenterItems[i] = presenter.VMListItem{
+				Name:           item.VM.Name,
+				Project:        item.VM.Project,
+				Zone:           item.VM.Zone,
+				MachineType:    item.VM.MachineType,
+				Status:         item.VM.Status,
+				SchedulePolicy: item.VM.SchedulePolicy,
+				Uptime:         item.Uptime,
+			}
 		}
 
-		// render all VMs in settings
-		t := table.New().
-			Border(lipgloss.NormalBorder()).
-			BorderStyle(lipgloss.NewStyle().Foreground(purple)).
-			Headers("Name", "Project", "Zone", "Machine-Type", "Status", "Schedule", "Uptime").
-			Rows(rows...).
-			StyleFunc(func(row, col int) lipgloss.Style {
-				switch row {
-				case table.HeaderRow:
-					return headerStyle
-				default:
-					return baseRowStyle.Align(lipgloss.Left)
-				}
-			})
-		fmt.Println(t)
+		// Render VM list
+		console.RenderVMList(presenterItems)
 	},
 }
 

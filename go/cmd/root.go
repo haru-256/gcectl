@@ -26,9 +26,14 @@ import (
 	"os"
 
 	"github.com/haru-256/gcectl/cmd/set"
-	"github.com/haru-256/gcectl/pkg/log"
-	"github.com/haru-256/gcectl/pkg/utils"
+	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/spf13/cobra"
+)
+
+var (
+	// CnfPath is the path to the configuration file
+	CnfPath string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -37,9 +42,9 @@ var rootCmd = &cobra.Command{
 	Short: "Google Compute Engine commands to control VMs",
 	Long:  `Google Compute Engine commands to control VMs such as listing vm and updating vm-spec, attach vm with stop-scheduler.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Logger.Debug("run root command")
+		infraLog.DefaultLogger.Debugf("run root command")
 		if err := cmd.Help(); err != nil {
-			log.Logger.Fatal(err)
+			infraLog.DefaultLogger.Fatalf("failed to show help: %v", err)
 			os.Exit(1)
 		}
 	},
@@ -50,22 +55,19 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Logger.Fatal(err)
+		infraLog.DefaultLogger.Fatalf("failed to execute command: %v", err)
 		os.Exit(1)
 	}
 }
 
-var (
-	CnfPath string
-)
-
 func init() {
+	console := presenter.NewConsolePresenter()
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	home, err := os.UserHomeDir()
 	if err != nil {
-		utils.ErrorReport(fmt.Sprintf("failed to get user home directory: %v", err))
+		console.Error(fmt.Sprintf("failed to get user home directory: %v", err))
 		os.Exit(1)
 	}
 	defaultCnfPath := home + "/.config/gcectl/config.yaml"
