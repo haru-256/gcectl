@@ -52,16 +52,21 @@ Example:
 
 		// 依存性の注入
 		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
+		// Set progress callback to display dots during operation
+		vmRepo.SetProgressCallback(console.Progress)
 		startVMUseCase := usecase.NewStartVMUseCase(vmRepo)
 
 		// Turn on the instance
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
+		fmt.Printf("Starting VM %s", vmName)
 		if err = startVMUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name); err != nil {
+			console.ProgressDone()
 			console.Error(fmt.Sprintf("Failed to turn on the instance: %v\n", err))
 			os.Exit(1)
 		}
+		console.ProgressDone()
 		console.Success(fmt.Sprintf("Turned on the instance: %v\n", vmName))
 	},
 }

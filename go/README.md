@@ -75,7 +75,8 @@ gcectl set schedule <vm_name> <policy_name> --un
 • Project       : my-project
 • Zone          : us-central1-a
 • MachineType   : e2-medium
-• Status        : RUNNING
+• Status        : 🟢 RUNNING
+• Uptime        : 2h30m15s
 • SchedulePolicy: my-schedule-policy
 ```
 
@@ -178,26 +179,36 @@ The application is organized into distinct layers, each with specific responsibi
 - **Not used for**: Simple read operations (List, Describe)
   - These operations directly use repository without business logic
   - Follows YAGNI (You Aren't Gonna Need It) principle
+- **Shared utilities**: Common functions like `calculateUptimeString()` are extracted
+  - Used by multiple commands to maintain consistency
+  - Reduces code duplication while maintaining clean architecture
 
 **Repository Pattern**
 
 - Abstracts GCP API interactions behind clean interfaces
 - Enables parallel execution using `errgroup` for performance
-- Provides progress feedback with `waitOperator` pattern
+- Provides progress feedback through callback pattern
+- Progress callbacks decouple infrastructure from presentation layer
 
 **Presenter Pattern**
 
 - Centralizes all console output formatting
 - Separates presentation logic from business logic
 - Uses `lipgloss` for styled terminal output
+- Implements `Progress()` and `ProgressDone()` for operation feedback
 
 #### 4. **Testing Strategy**
 
 - **Domain Layer**: Unit tests for business rules (CanStart, CanStop, Uptime)
 - **Use Case Layer**: Tests with mock repositories for business logic validation
+  - Tests for shared utilities like `calculateUptimeString()`
+  - Tests for describe and list operations
 - **Infrastructure Layer**: Integration tests for configuration parsing
 - **Presenter Layer**: Output validation tests
+  - Progress indicator tests (`Progress()`, `ProgressDone()`)
+  - Status emoji rendering tests
 - All tests use table-driven test pattern for clarity and maintainability
+- 68+ test cases with race detection enabled
 
 ## Directory Structure
 
@@ -227,6 +238,12 @@ go/
 │   │   └── repository/              # Repository interfaces
 │   │       └── vm_repository.go     # VM repository contract
 │   ├── usecase/                     # Use Case Layer - Application Logic
+│   │   ├── describe_vm.go           # Describe VM use case
+│   │   ├── describe_vm_test.go      # Describe VM tests
+│   │   ├── list_vms.go              # List VMs use case
+│   │   ├── list_vms_test.go         # List VMs tests
+│   │   ├── vm_uptime.go             # Shared uptime calculation
+│   │   ├── vm_uptime_test.go        # Uptime calculation tests
 │   │   ├── start_vm.go              # Start VM use case
 │   │   ├── start_vm_test.go         # Start VM tests
 │   │   ├── stop_vm.go               # Stop VM use case
@@ -292,7 +309,9 @@ go/
 - **Dependencies**: Domain layer (implements repository interfaces)
 - **Key Features**:
   - Parallel execution with `errgroup`
-  - Progress indicators with `waitOperator`
+  - Progress indicators with callback pattern
+  - `ProgressCallback` type for clean layer separation
+  - `SetProgressCallback()` for injecting presentation logic
   - Error handling and retry logic
 
 #### Interface Layer (`cmd/`, `internal/interface/`)
@@ -302,11 +321,13 @@ go/
   - CLI commands (Cobra framework)
   - Console output formatting (lipgloss)
   - VM list and detail rendering
+  - Progress indicators
 - **Dependencies**: All inner layers
 - **Key Features**:
   - Styled terminal output (tables, lists)
-  - Status emojis (🟢 RUNNING, 🔴 STOPPED)
+  - Status emojis (🟢 RUNNING, 🔴 STOPPED, etc.)
   - Uptime display for running VMs
+  - Progress feedback (`Progress()`, `ProgressDone()`)
 
 ### Common Issues
 
@@ -371,10 +392,12 @@ make lint
 - ✅ Set machine type (`set machine-type` command)
 - ✅ Set/unset schedule policy (`set schedule` command)
 - ✅ Clean Architecture implementation
-- ✅ Comprehensive test coverage (50+ test cases)
+- ✅ Comprehensive test coverage (68+ test cases)
 - ✅ Progress indicators during operations
 - ✅ Parallel execution for list operations
 - ✅ Styled console output with lipgloss
+- ✅ Uptime display for running VMs
+- ✅ Callback pattern for progress feedback
 
 ### Planned Features 🔜
 
@@ -420,9 +443,9 @@ Output Format
 Testing
 
 - [x] Domain layer tests
-- [x] Use case layer tests  
+- [x] Use case layer tests (68+ test cases)
 - [x] Infrastructure layer tests
-- [x] Presenter layer tests
+- [x] Presenter layer tests (including progress indicators)
 - [ ] Integration tests with GCP emulator
 - [ ] E2E tests
 

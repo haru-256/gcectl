@@ -71,6 +71,29 @@ func (p *ConsolePresenter) Error(msg string) {
 	fmt.Println(p.errorStyle.Render("[ERROR] | ") + msg)
 }
 
+// Progress prints a progress indicator (dot) without a newline.
+// This is typically called periodically during long-running operations.
+//
+// Example:
+//
+//	// During operation: . . . . .
+//	presenter.Progress()
+func (p *ConsolePresenter) Progress() {
+	fmt.Print(".")
+}
+
+// ProgressDone prints a newline to complete a progress indicator line.
+// This should be called after a series of Progress() calls.
+//
+// Example:
+//
+//	presenter.Progress() // prints "."
+//	presenter.Progress() // prints "."
+//	presenter.ProgressDone() // prints newline
+func (p *ConsolePresenter) ProgressDone() {
+	fmt.Println()
+}
+
 // VMListItem represents a VM instance for list view display.
 // This type is used to decouple the presenter layer from domain models,
 // allowing the presentation logic to receive pre-formatted data.

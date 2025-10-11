@@ -70,6 +70,77 @@ func TestConsolePresenter_Error(t *testing.T) {
 	}
 }
 
+func TestConsolePresenter_Progress(t *testing.T) {
+	presenter := NewConsolePresenter()
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	presenter.Progress()
+
+	_ = w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	output := buf.String()
+
+	if output != "." {
+		t.Errorf("Progress() output = %q, want '.'", output)
+	}
+}
+
+func TestConsolePresenter_ProgressDone(t *testing.T) {
+	presenter := NewConsolePresenter()
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	presenter.ProgressDone()
+
+	_ = w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	output := buf.String()
+
+	if output != "\n" {
+		t.Errorf("ProgressDone() output = %q, want newline", output)
+	}
+}
+
+func TestConsolePresenter_ProgressSequence(t *testing.T) {
+	presenter := NewConsolePresenter()
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// Simulate a sequence of progress updates
+	presenter.Progress()
+	presenter.Progress()
+	presenter.Progress()
+	presenter.ProgressDone()
+
+	_ = w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	output := buf.String()
+
+	expected := "...\n"
+	if output != expected {
+		t.Errorf("Progress sequence output = %q, want %q", output, expected)
+	}
+}
+
 func TestConsolePresenter_RenderVMList(t *testing.T) {
 	presenter := NewConsolePresenter()
 

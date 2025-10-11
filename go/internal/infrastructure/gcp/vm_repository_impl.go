@@ -12,24 +12,71 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
-	"github.com/haru-256/gcectl/internal/domain/repository"
 	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
 
-type VMRepositoryImpl struct {
-	logger     log.Logger
-	configPath string
+// ProgressCallback is a function type for reporting operation progress.
+//
+// This callback is invoked periodically (approximately once per second) while waiting
+// for long-running GCP operations to complete. It allows the presentation layer to
+// display progress indicators (e.g., dots, spinner) without coupling the infrastructure
+// layer to specific output mechanisms.
+//
+// The callback takes no parameters and returns no values. It should be a lightweight
+// operation, typically just printing a character or updating a progress indicator.
+//
+// Example:
+//
+//	repo.SetProgressCallback(func() {
+//	    fmt.Print(".")
+//	})
+type ProgressCallback func()
+
+// VMRepository implements the repository.VMRepository interface for GCP.
+//
+//nolint:govet // Field order optimized for readability over memory alignment
+type VMRepository struct {
+	configPath       string
+	logger           log.Logger
+	progressCallback ProgressCallback // Optional callback for operation progress
 }
 
-func NewVMRepository(configPath string, logger log.Logger) repository.VMRepository {
-	return &VMRepositoryImpl{
+// NewVMRepository creates a new VMRepository instance.
+//
+// Parameters:
+//   - configPath: Path to the configuration file
+//   - logger: Logger instance for logging
+//
+// Returns:
+//   - *VMRepository: A new repository instance
+func NewVMRepository(configPath string, logger log.Logger) *VMRepository {
+	return &VMRepository{
 		configPath: configPath,
 		logger:     logger,
 	}
 }
 
-func (r *VMRepositoryImpl) FindByName(ctx context.Context, project, zone, name string) (*model.VM, error) {
+// SetProgressCallback sets a callback function to be called during operation progress.
+//
+// This method allows the presentation layer to display progress (e.g., dots) during
+// long-running GCP operations without violating Clean Architecture principles.
+// The callback will be invoked approximately once per second while waiting for
+// operations to complete.
+//
+// Parameters:
+//   - callback: Function to call periodically during operations
+//
+// Example:
+//
+//	repo := gcp.NewVMRepository(configPath, logger)
+//	repo.SetProgressCallback(console.Progress)
+//	repo.Start(ctx, vm) // Will call console.Progress() periodically
+func (r *VMRepository) SetProgressCallback(callback ProgressCallback) {
+	r.progressCallback = callback
+}
+
+func (r *VMRepository) FindByName(ctx context.Context, project, zone, name string) (*model.VM, error) {
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
@@ -54,7 +101,7 @@ func (r *VMRepositoryImpl) FindByName(ctx context.Context, project, zone, name s
 	return r.toModel(ctx, instance)
 }
 
-func (r *VMRepositoryImpl) FindAll(ctx context.Context) ([]*model.VM, error) {
+func (r *VMRepository) FindAll(ctx context.Context) ([]*model.VM, error) {
 	// 設定ファイルから VM リストを読み込み
 	cfg, err := config.ParseConfig(r.configPath)
 	if err != nil {
@@ -94,7 +141,7 @@ func (r *VMRepositoryImpl) FindAll(ctx context.Context) ([]*model.VM, error) {
 	return vms, nil
 }
 
-func (r *VMRepositoryImpl) Start(ctx context.Context, vm *model.VM) error {
+func (r *VMRepository) Start(ctx context.Context, vm *model.VM) error {
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
@@ -116,10 +163,10 @@ func (r *VMRepositoryImpl) Start(ctx context.Context, vm *model.VM) error {
 		return fmt.Errorf("failed to start instance: %w", err)
 	}
 
-	return waitOperator(ctx, op)
+	return r.waitOperator(ctx, op)
 }
 
-func (r *VMRepositoryImpl) Stop(ctx context.Context, vm *model.VM) error {
+func (r *VMRepository) Stop(ctx context.Context, vm *model.VM) error {
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
@@ -141,11 +188,11 @@ func (r *VMRepositoryImpl) Stop(ctx context.Context, vm *model.VM) error {
 		return fmt.Errorf("failed to stop instance: %w", err)
 	}
 
-	return waitOperator(ctx, op)
+	return r.waitOperator(ctx, op)
 }
 
 // SetSchedulePolicy attaches a schedule policy to a Google Compute Engine instance.
-func (r *VMRepositoryImpl) SetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
+func (r *VMRepository) SetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
@@ -197,7 +244,7 @@ func (r *VMRepositoryImpl) SetSchedulePolicy(ctx context.Context, vm *model.VM, 
 
 	r.logger.Infof("Setting schedule policy %s for instance %s", policyName, vm.Name)
 
-	if err = waitOperator(ctx, op); err != nil {
+	if err = r.waitOperator(ctx, op); err != nil {
 		r.logger.Errorf("failed to wait for operation: %v", err)
 		return fmt.Errorf("operation failed: %w", err)
 	}
@@ -206,7 +253,7 @@ func (r *VMRepositoryImpl) SetSchedulePolicy(ctx context.Context, vm *model.VM, 
 }
 
 // UnsetSchedulePolicy removes a schedule policy from a Google Compute Engine instance.
-func (r *VMRepositoryImpl) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
+func (r *VMRepository) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
@@ -258,7 +305,7 @@ func (r *VMRepositoryImpl) UnsetSchedulePolicy(ctx context.Context, vm *model.VM
 
 	r.logger.Infof("Removing schedule policy %s from instance %s", policyName, vm.Name)
 
-	if err = waitOperator(ctx, op); err != nil {
+	if err = r.waitOperator(ctx, op); err != nil {
 		r.logger.Errorf("failed to wait for operation: %v", err)
 		return fmt.Errorf("operation failed: %w", err)
 	}
@@ -267,7 +314,7 @@ func (r *VMRepositoryImpl) UnsetSchedulePolicy(ctx context.Context, vm *model.VM
 }
 
 // UpdateMachineType changes the machine type of a VM instance.
-func (r *VMRepositoryImpl) UpdateMachineType(ctx context.Context, vm *model.VM, machineType string) error {
+func (r *VMRepository) UpdateMachineType(ctx context.Context, vm *model.VM, machineType string) error {
 	// Create a new InstancesClient with authentication
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
@@ -300,7 +347,7 @@ func (r *VMRepositoryImpl) UpdateMachineType(ctx context.Context, vm *model.VM, 
 
 	r.logger.Infof("Setting machine type to %s for instance %s", machineType, vm.Name)
 
-	if err = waitOperator(ctx, op); err != nil {
+	if err = r.waitOperator(ctx, op); err != nil {
 		r.logger.Errorf("failed to wait for operation: %v", err)
 		return fmt.Errorf("operation failed: %w", err)
 	}
@@ -309,7 +356,7 @@ func (r *VMRepositoryImpl) UpdateMachineType(ctx context.Context, vm *model.VM, 
 }
 
 // toModel converts a GCP instance to domain model
-func (r *VMRepositoryImpl) toModel(ctx context.Context, instance *computepb.Instance) (*model.VM, error) {
+func (r *VMRepository) toModel(ctx context.Context, instance *computepb.Instance) (*model.VM, error) {
 	vm := &model.VM{
 		Name:        instance.GetName(),
 		Status:      model.StatusFromString(instance.GetStatus()),
@@ -347,7 +394,7 @@ func (r *VMRepositoryImpl) toModel(ctx context.Context, instance *computepb.Inst
 	return vm, nil
 }
 
-func (r *VMRepositoryImpl) getSchedulePolicy(ctx context.Context, instance *computepb.Instance) (string, error) {
+func (r *VMRepository) getSchedulePolicy(ctx context.Context, instance *computepb.Instance) (string, error) {
 	defaultPolicy := "#NONE"
 
 	policies := instance.GetResourcePolicies()
@@ -454,9 +501,25 @@ func extractRegion(zoneURI string) (string, error) {
 	return zoneName[:lastHyphen], nil
 }
 
-// waitOperator waits for the operation to complete and prints a dot every second until the operation is done.
-// It returns an error if the operation fails or if the context is canceled.
-func waitOperator(ctx context.Context, op *compute.Operation) error {
+// waitOperator waits for the operation to complete and optionally reports progress.
+//
+// This method monitors a GCP compute operation until completion. If a progress callback
+// has been set via SetProgressCallback(), it will be called every second during the wait.
+// This allows the presentation layer to display progress (e.g., dots) without violating
+// Clean Architecture principles.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control
+//   - op: The GCP compute operation to wait for
+//
+// Returns:
+//   - error: Error if the operation fails or context is canceled
+//
+// Example:
+//
+//	repo.SetProgressCallback(console.Progress)
+//	err := repo.waitOperator(ctx, operation)
+func (r *VMRepository) waitOperator(ctx context.Context, op *compute.Operation) error {
 	if op == nil {
 		return fmt.Errorf("operation is nil")
 	}
@@ -470,23 +533,26 @@ func waitOperator(ctx context.Context, op *compute.Operation) error {
 		close(done)
 		return nil
 	})
-	eg.Go(func() error {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ctx.Done(): // Context canceled, exit the goroutine
-				fmt.Println() // Print newline for clean output
-				return ctx.Err()
-			case <-done: // Operation is done, exit the goroutine
-				fmt.Println() // Print newline for clean output
-				return nil
-			case <-ticker.C: // One second has passed
-				fmt.Print(".")
+	// Only start progress reporting if callback is set
+	if r.progressCallback != nil {
+		eg.Go(func() error {
+			ticker := time.NewTicker(1 * time.Second)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ctx.Done(): // Context canceled, exit the goroutine
+					return ctx.Err()
+				case <-done: // Operation is done, exit the goroutine
+					return nil
+				case <-ticker.C: // One second has passed
+					r.progressCallback()
+				}
 			}
-		}
-	})
+		})
+	}
+
 	if err := eg.Wait(); err != nil {
 		return fmt.Errorf("failed to wait for operation: %v", err)
 	}
