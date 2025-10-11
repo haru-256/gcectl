@@ -2,6 +2,7 @@ package gce
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
 	farm "github.com/dgryski/go-farm"
 	"github.com/haru-256/gcectl/pkg/config"
+	"github.com/haru-256/gcectl/pkg/enums"
 	"github.com/haru-256/gcectl/pkg/log"
 	"golang.org/x/sync/errgroup"
 )
@@ -24,11 +26,8 @@ import (
 // Returns:
 //   - A string representing the current status of the instance. if the status is empty, it returns "UNKNOWN".
 //   - An error, which is always nil in the current implementation.
-func getStatus(ctx context.Context, instance *computepb.Instance) (string, error) {
-	status := instance.GetStatus()
-	if status == "" {
-		return "UNKNOWN", fmt.Errorf("status is missing in the instance")
-	}
+func getStatus(ctx context.Context, instance *computepb.Instance) (enums.Status, error) {
+	status := enums.StatusFromString(instance.GetStatus())
 	return status, nil
 }
 
@@ -216,6 +215,18 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 			if err != nil {
 				log.Logger.Errorf("Failed to get schedule policy: %v", err)
 			}
+
+			uptime, err := getCurrentUptime(ctx, instance)
+			if err != nil {
+				if errors.Is(err, ErrNotRunning) {
+					vm.Uptime = "N/A"
+				} else {
+					log.Logger.Errorf("Failed to get uptime: %v", err)
+				}
+			} else {
+				vm.Uptime = uptime
+			}
+
 			return nil
 		})
 	}
@@ -511,4 +522,36 @@ func waitOperator(ctx context.Context, op *compute.Operation) error {
 		return fmt.Errorf("failed to wait for operation: %v", err)
 	}
 	return nil
+}
+
+// getCurrentUptime calculates and returns the current uptime of a running GCE instance.
+// It computes the duration between the instance's last start timestamp and the current time.
+//
+// Parameters:
+//   - ctx: The context for the operation
+//   - instance: The GCE instance to check uptime for
+//
+// Returns:
+//   - A string representation of the uptime duration (e.g., "2h30m15s")
+//   - An error if the instance is not running or if the timestamp cannot be parsed
+//
+// The function returns ErrNotRunning if the instance is not in RUNNING status.
+func getCurrentUptime(ctx context.Context, instance *computepb.Instance) (string, error) {
+	status, err := getStatus(ctx, instance)
+	if err != nil {
+		return "", err
+	}
+	if status != enums.StatusRunning {
+		return "", ErrNotRunning
+	}
+
+	startTimeStr := instance.GetLastStartTimestamp()
+	startTime, err := time.Parse(time.RFC3339, startTimeStr)
+	if err != nil {
+		return "", err
+	}
+	currentTime := time.Now().UTC()
+
+	uptime := currentTime.Sub(startTime)
+	return uptime.String(), nil
 }

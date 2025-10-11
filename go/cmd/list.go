@@ -54,8 +54,9 @@ Example:
 				vm.Project,
 				vm.Zone,
 				vm.MachineType,
-				formatStatus(vm.Status),
+				vm.Status.Render(),
 				vm.SchedulePolicy,
+				vm.Uptime,
 			})
 		}
 
@@ -63,7 +64,7 @@ Example:
 		t := table.New().
 			Border(lipgloss.NormalBorder()).
 			BorderStyle(lipgloss.NewStyle().Foreground(purple)).
-			Headers("Name", "Project", "Zone", "Machine-Type", "Status", "Schedule").
+			Headers("Name", "Project", "Zone", "Machine-Type", "Status", "Schedule", "Uptime").
 			Rows(rows...).
 			StyleFunc(func(row, col int) lipgloss.Style {
 				switch {
@@ -75,17 +76,6 @@ Example:
 			})
 		fmt.Println(t)
 	},
-}
-
-func formatStatus(status string) string {
-	switch status {
-	case "RUNNING":
-		return "🟢(RUNNING)"
-	case "TERMINATED":
-		return "🔴(TERMINATED)"
-	default:
-		return status
-	}
 }
 
 func init() {
