@@ -147,7 +147,7 @@ func getInstance(ctx context.Context, projectID, zone, instanceName string) (*co
 	// Create a new ResourcePolicies client
 	policyClient, err := compute.NewResourcePoliciesRESTClient(ctx)
 	if err != nil {
-log.Logger.Errorf("Failed to create ResourcePolicies client: %v", err)
+		log.Logger.Errorf("Failed to create ResourcePolicies client: %v", err)
 		return nil, err
 	}
 	defer func() {
@@ -195,6 +195,7 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 
 	// get status and schedule policy
 	eg, ctx := errgroup.WithContext(ctx)
+	now := time.Now().UTC()
 	for _, vm := range vms {
 		vm := vm
 		eg.Go(func() error {
@@ -228,7 +229,7 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 				log.Logger.Errorf("Failed to get schedule policy: %v", err)
 			}
 
-			uptime, err := getCurrentUptime(ctx, instance, time.Now().UTC())
+			uptime, err := getCurrentUptime(ctx, instance, now)
 			if err != nil {
 				if errors.Is(err, ErrNotRunning) {
 					vm.Uptime = "N/A"
