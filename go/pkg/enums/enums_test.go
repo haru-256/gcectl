@@ -48,8 +48,8 @@ func TestStatusFromString(t *testing.T) {
 func TestStatus_String(t *testing.T) {
 	tests := []struct {
 		name     string
-		status   Status
 		expected string
+		status   Status
 	}{
 		{
 			name:     "Running status",
@@ -86,8 +86,8 @@ func TestStatus_String(t *testing.T) {
 func TestStatus_Render(t *testing.T) {
 	tests := []struct {
 		name     string
-		status   Status
 		expected string
+		status   Status
 	}{
 		{
 			name:     "Running status with emoji",
@@ -159,8 +159,8 @@ func TestStatusRoundTrip(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  string
-		status Status
 		output string
+		status Status
 	}{
 		{
 			name:   "RUNNING round trip",

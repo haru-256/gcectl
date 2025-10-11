@@ -2,4 +2,4 @@ package gce
 
 import "errors"
 
-var ErrNotRunning = errors.New("Instance is not running")
+var ErrNotRunning = errors.New("instance is not running")

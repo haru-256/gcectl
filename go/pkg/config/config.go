@@ -19,9 +19,9 @@ type VM struct {
 	Project        string
 	Zone           string
 	MachineType    string
-	Status         enums.Status
 	SchedulePolicy string
 	Uptime         string
+	Status         enums.Status
 }
 
 // GetVMByName returns the VM with the given name.

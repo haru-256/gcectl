@@ -69,15 +69,17 @@ vm:
 				if err != nil {
 					t.Fatalf("failed to create temp file: %v", err)
 				}
-				defer os.Remove(tmpfile.Name())
+				defer func() {
+					if removeErr := os.Remove(tmpfile.Name()); removeErr != nil {
+						t.Logf("failed to remove temp file: %v", removeErr)
+					}
+				}()
 
 				// Write test config data
 				if err = os.WriteFile(tmpfile.Name(), []byte(tt.configData), 0644); err != nil {
 					t.Fatalf("failed to write config file: %v", err)
 				}
-			}
-
-			// Test ParseConfig
+			} // Test ParseConfig
 			filename := "nonexistent.yaml"
 			if tmpfile != nil {
 				filename = tmpfile.Name()

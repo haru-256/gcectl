@@ -67,8 +67,8 @@ Example:
 			Headers("Name", "Project", "Zone", "Machine-Type", "Status", "Schedule", "Uptime").
 			Rows(rows...).
 			StyleFunc(func(row, col int) lipgloss.Style {
-				switch {
-				case row == table.HeaderRow:
+				switch row {
+				case table.HeaderRow:
 					return headerStyle
 				default:
 					return baseRowStyle.Align(lipgloss.Left)
