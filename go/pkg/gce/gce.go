@@ -2,6 +2,7 @@ package gce
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	computepb "cloud.google.com/go/compute/apiv1/computepb"
 	farm "github.com/dgryski/go-farm"
 	"github.com/haru-256/gcectl/pkg/config"
+	"github.com/haru-256/gcectl/pkg/enums"
 	"github.com/haru-256/gcectl/pkg/log"
 	"golang.org/x/sync/errgroup"
 )
@@ -24,11 +26,8 @@ import (
 // Returns:
 //   - A string representing the current status of the instance. if the status is empty, it returns "UNKNOWN".
 //   - An error, which is always nil in the current implementation.
-func getStatus(ctx context.Context, instance *computepb.Instance) (string, error) {
-	status := instance.GetStatus()
-	if status == "" {
-		return "UNKNOWN", fmt.Errorf("status is missing in the instance")
-	}
+func getStatus(ctx context.Context, instance *computepb.Instance) (enums.Status, error) {
+	status := enums.StatusFromString(instance.GetStatus())
 	return status, nil
 }
 
@@ -74,7 +73,11 @@ func getSchedulePolicy(ctx context.Context, instance *computepb.Instance) (strin
 		log.Logger.Errorf("Failed to create Instances client: %v", err)
 		return "", err
 	}
-	defer policyClient.Close()
+	defer func() {
+		if closeErr := policyClient.Close(); closeErr != nil {
+			log.Logger.Errorf("Failed to close policy client: %v", closeErr)
+		}
+	}()
 	policies := instance.GetResourcePolicies()
 	project, err := getProjectFromInstance(instance)
 	if err != nil {
@@ -87,7 +90,7 @@ func getSchedulePolicy(ctx context.Context, instance *computepb.Instance) (strin
 		return "", err
 	}
 
-	var schedulePolicyName string = ""
+	schedulePolicyName := ""
 	for _, policy := range policies {
 		log.Logger.Debugf("Resource Policy: %s", policy)
 
@@ -136,14 +139,22 @@ func getInstance(ctx context.Context, projectID, zone, instanceName string) (*co
 		log.Logger.Errorf("Failed to create Instances client: %v", err)
 		return nil, err
 	}
-	defer instancesClient.Close()
+	defer func() {
+		if closeErr := instancesClient.Close(); closeErr != nil {
+			log.Logger.Errorf("Failed to close instances client: %v", closeErr)
+		}
+	}()
 	// Create a new ResourcePolicies client
 	policyClient, err := compute.NewResourcePoliciesRESTClient(ctx)
 	if err != nil {
-		log.Logger.Errorf("Failed to create Instances client: %v", err)
+		log.Logger.Errorf("Failed to create ResourcePolicies client: %v", err)
 		return nil, err
 	}
-	defer policyClient.Close()
+	defer func() {
+		if closeErr := policyClient.Close(); closeErr != nil {
+			log.Logger.Errorf("Failed to close policy client: %v", closeErr)
+		}
+	}()
 
 	// Create the request to get instance details
 	req := &computepb.GetInstanceRequest{
@@ -184,6 +195,7 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 
 	// get status and schedule policy
 	eg, ctx := errgroup.WithContext(ctx)
+	now := time.Now().UTC()
 	for _, vm := range vms {
 		vm := vm
 		eg.Go(func() error {
@@ -216,6 +228,18 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 			if err != nil {
 				log.Logger.Errorf("Failed to get schedule policy: %v", err)
 			}
+
+			uptime, err := getCurrentUptime(ctx, instance, now)
+			if err != nil {
+				if errors.Is(err, ErrNotRunning) {
+					vm.Uptime = "N/A"
+				} else {
+					log.Logger.Errorf("Failed to get uptime: %v", err)
+				}
+			} else {
+				vm.Uptime = uptime
+			}
+
 			return nil
 		})
 	}
@@ -279,7 +303,11 @@ func OnVM(ctx context.Context, vm *config.VM) error {
 		log.Logger.Errorf("Failed to create instances client: %v", err)
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			log.Logger.Errorf("Failed to close client: %v", closeErr)
+		}
+	}()
 
 	// Create the Start request
 	req := &computepb.StartInstanceRequest{
@@ -313,7 +341,11 @@ func OffVM(ctx context.Context, vm *config.VM) error {
 		log.Logger.Errorf("Failed to create instances client: %v", err)
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			log.Logger.Errorf("Failed to close client: %v", closeErr)
+		}
+	}()
 
 	// Create the Start request
 	req := &computepb.StopInstanceRequest{
@@ -347,7 +379,11 @@ func SetMachineType(ctx context.Context, vm *config.VM, machineType string) erro
 		log.Logger.Errorf("Failed to create instances client: %v", err)
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			log.Logger.Errorf("Failed to close client: %v", closeErr)
+		}
+	}()
 	// Set the new machine type
 	setMachineTypeReq := &computepb.SetMachineTypeInstanceRequest{
 		Project:  vm.Project,
@@ -382,7 +418,11 @@ func SetSchedulePolicy(ctx context.Context, vm *config.VM, policyName string) er
 		log.Logger.Errorf("failed to create Instances client: %v", err)
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			log.Logger.Errorf("Failed to close client: %v", closeErr)
+		}
+	}()
 
 	instance, err := getInstance(ctx, vm.Project, vm.Zone, vm.Name)
 	if err != nil {
@@ -431,7 +471,11 @@ func UnsetSchedulePolicy(ctx context.Context, vm *config.VM, policyName string) 
 		log.Logger.Errorf("Failed to create Instances client: %v", err)
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			log.Logger.Errorf("Failed to close client: %v", closeErr)
+		}
+	}()
 
 	instance, err := getInstance(ctx, vm.Project, vm.Zone, vm.Name)
 	if err != nil {
@@ -511,4 +555,35 @@ func waitOperator(ctx context.Context, op *compute.Operation) error {
 		return fmt.Errorf("failed to wait for operation: %v", err)
 	}
 	return nil
+}
+
+// getCurrentUptime calculates and returns the current uptime of a running GCE instance.
+// It computes the duration between the instance's last start timestamp and the current time.
+//
+// Parameters:
+//   - ctx: The context for the operation
+//   - instance: The GCE instance to check uptime for
+//
+// Returns:
+//   - A string representation of the uptime duration (e.g., "2h30m15s")
+//   - An error if the instance is not running or if the timestamp cannot be parsed
+//
+// The function returns ErrNotRunning if the instance is not in RUNNING status.
+func getCurrentUptime(ctx context.Context, instance *computepb.Instance, now time.Time) (string, error) {
+	status, err := getStatus(ctx, instance)
+	if err != nil {
+		return "", err
+	}
+	if status != enums.StatusRunning {
+		return "", ErrNotRunning
+	}
+
+	startTimeStr := instance.GetLastStartTimestamp()
+	startTime, err := time.Parse(time.RFC3339, startTimeStr)
+	if err != nil {
+		return "", err
+	}
+
+	uptime := now.Sub(startTime)
+	return uptime.String(), nil
 }

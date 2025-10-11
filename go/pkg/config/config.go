@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 
+	"github.com/haru-256/gcectl/pkg/enums"
 	"github.com/haru-256/gcectl/pkg/log"
 	"gopkg.in/yaml.v3"
 )
@@ -18,8 +19,9 @@ type VM struct {
 	Project        string
 	Zone           string
 	MachineType    string
-	Status         string
 	SchedulePolicy string
+	Uptime         string
+	Status         enums.Status
 }
 
 // GetVMByName returns the VM with the given name.
