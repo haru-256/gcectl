@@ -216,7 +216,7 @@ func UpdateInstancesInfo(ctx context.Context, vms []*config.VM) error {
 				log.Logger.Errorf("Failed to get schedule policy: %v", err)
 			}
 
-			uptime, err := getCurrentUptime(ctx, instance)
+			uptime, err := getCurrentUptime(ctx, instance, time.Now().UTC())
 			if err != nil {
 				if errors.Is(err, ErrNotRunning) {
 					vm.Uptime = "N/A"
