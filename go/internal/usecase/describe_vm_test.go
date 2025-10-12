@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/stretchr/testify/assert"
 )
 
 var errTestDescribe = errors.New("test error")
@@ -135,42 +136,26 @@ func TestDescribeVM(t *testing.T) {
 
 			vm, uptime, err := DescribeVM(context.Background(), repo, tt.project, tt.zone, tt.vmName)
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DescribeVM() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Error(t, err, "DescribeVM() should return an error")
 				return
 			}
 
-			if tt.wantErr {
-				return
-			}
+			assert.NoError(t, err, "DescribeVM() should not return an error")
 
 			// Check VM fields (except LastStartTimestamp which varies)
-			if vm.Name != tt.wantVM.Name {
-				t.Errorf("VM.Name = %v, want %v", vm.Name, tt.wantVM.Name)
-			}
-			if vm.Project != tt.wantVM.Project {
-				t.Errorf("VM.Project = %v, want %v", vm.Project, tt.wantVM.Project)
-			}
-			if vm.Zone != tt.wantVM.Zone {
-				t.Errorf("VM.Zone = %v, want %v", vm.Zone, tt.wantVM.Zone)
-			}
-			if vm.MachineType != tt.wantVM.MachineType {
-				t.Errorf("VM.MachineType = %v, want %v", vm.MachineType, tt.wantVM.MachineType)
-			}
-			if vm.Status != tt.wantVM.Status {
-				t.Errorf("VM.Status = %v, want %v", vm.Status, tt.wantVM.Status)
-			}
+			assert.Equal(t, tt.wantVM.Name, vm.Name, "VM.Name should match")
+			assert.Equal(t, tt.wantVM.Project, vm.Project, "VM.Project should match")
+			assert.Equal(t, tt.wantVM.Zone, vm.Zone, "VM.Zone should match")
+			assert.Equal(t, tt.wantVM.MachineType, vm.MachineType, "VM.MachineType should match")
+			assert.Equal(t, tt.wantVM.Status, vm.Status, "VM.Status should match")
 
 			// Check uptime
 			if tt.wantUptime == "N/A" {
-				if uptime != "N/A" {
-					t.Errorf("Uptime = %v, want N/A", uptime)
-				}
+				assert.Equal(t, "N/A", uptime, "Uptime should be N/A")
 			} else if tt.name == "running VM with uptime" {
 				// For running VM, check that uptime is not "N/A" and contains time components
-				if uptime == "N/A" {
-					t.Errorf("Uptime = N/A, want actual uptime string")
-				}
+				assert.NotEqual(t, "N/A", uptime, "Uptime should not be N/A")
 			}
 		})
 	}

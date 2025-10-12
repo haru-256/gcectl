@@ -3,6 +3,8 @@ package model
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStatus_String(t *testing.T) {
@@ -41,9 +43,8 @@ func TestStatus_String(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.status.String(); got != tt.want {
-				t.Errorf("Status.String() = %v, want %v", got, tt.want)
-			}
+			got := tt.status.String()
+			assert.Equal(t, tt.want, got, "Status.String() should return %v", tt.want)
 		})
 	}
 }
@@ -88,9 +89,8 @@ func TestStatusFromString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := StatusFromString(tt.input); got != tt.want {
-				t.Errorf("StatusFromString() = %v, want %v", got, tt.want)
-			}
+			got := StatusFromString(tt.input)
+			assert.Equal(t, tt.want, got, "StatusFromString(%v) should return %v", tt.input, tt.want)
 		})
 	}
 }
@@ -131,9 +131,8 @@ func TestVM_CanStart(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			vm := &VM{Status: tt.status}
-			if got := vm.CanStart(); got != tt.want {
-				t.Errorf("VM.CanStart() = %v, want %v", got, tt.want)
-			}
+			got := vm.CanStart()
+			assert.Equal(t, tt.want, got, "VM.CanStart() with status %v should return %v", tt.status, tt.want)
 		})
 	}
 }
@@ -174,9 +173,8 @@ func TestVM_CanStop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			vm := &VM{Status: tt.status}
-			if got := vm.CanStop(); got != tt.want {
-				t.Errorf("VM.CanStop() = %v, want %v", got, tt.want)
-			}
+			got := vm.CanStop()
+			assert.Equal(t, tt.want, got, "VM.CanStop() with status %v should return %v", tt.status, tt.want)
 		})
 	}
 }
@@ -230,14 +228,8 @@ func TestVM_Uptime(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			duration, err := tt.vm.Uptime(tt.now)
 
-			if err != tt.wantErr {
-				t.Errorf("VM.Uptime() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if duration != tt.wantDuration {
-				t.Errorf("VM.Uptime() duration = %v, want %v", duration, tt.wantDuration)
-			}
+			assert.Equal(t, tt.wantErr, err, "VM.Uptime() error should be %v", tt.wantErr)
+			assert.Equal(t, tt.wantDuration, duration, "VM.Uptime() duration should be %v", tt.wantDuration)
 		})
 	}
 }

@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var errTestList = errors.New("test error")
@@ -105,42 +107,27 @@ func TestListVMsUseCase_Execute(t *testing.T) {
 			items, err := useCase.Execute(ctx)
 
 			// Check error
-			if (err != nil) != tt.wantError {
-				t.Errorf("Execute() error = %v, wantError %v", err, tt.wantError)
+			if tt.wantError {
+				assert.Error(t, err, "Execute() should return an error")
 				return
 			}
 
-			if tt.wantError {
-				return
-			}
+			assert.NoError(t, err, "Execute() should not return an error")
 
 			// Check length
-			if len(items) != tt.wantLen {
-				t.Errorf("Execute() returned %d items, want %d", len(items), tt.wantLen)
-				return
-			}
+			require.Len(t, items, tt.wantLen, "Execute() should return %d items", tt.wantLen)
 
 			// Check VM data and uptime strings
 			for i, item := range items {
-				if item.VM != tt.mockVMs[i] {
-					t.Errorf("Execute() item[%d].VM = %v, want %v", i, item.VM, tt.mockVMs[i])
-				}
+				assert.Equal(t, tt.mockVMs[i], item.VM, "Execute() item[%d].VM should match", i)
 
-				// For uptime, we need to be flexible with time-based tests
-				// Check if it's "N/A" or a valid duration string
+				// For uptime, check if it's "N/A" or not
+				// Detailed format testing is covered in TestFormatUptime
 				if tt.wantUptimes[i] == "N/A" {
-					if item.Uptime != "N/A" {
-						t.Errorf("Execute() item[%d].Uptime = %s, want N/A", i, item.Uptime)
-					}
+					assert.Equal(t, "N/A", item.Uptime, "Execute() item[%d].Uptime should be N/A", i)
 				} else {
-					// For running VMs, just verify it's not "N/A" and is a valid duration format
-					if item.Uptime == "N/A" {
-						t.Errorf("Execute() item[%d].Uptime = N/A, want a valid duration", i)
-					}
-					// Verify it's a parseable duration
-					if _, parseErr := time.ParseDuration(item.Uptime); parseErr != nil {
-						t.Errorf("Execute() item[%d].Uptime = %s is not a valid duration: %v", i, item.Uptime, parseErr)
-					}
+					// For running VMs, just verify it's not "N/A"
+					assert.NotEqual(t, "N/A", item.Uptime, "Execute() item[%d].Uptime should not be N/A", i)
 				}
 			}
 		})

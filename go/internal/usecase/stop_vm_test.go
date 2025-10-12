@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStopVMUseCase_Execute(t *testing.T) {
@@ -116,17 +117,12 @@ func TestStopVMUseCase_Execute(t *testing.T) {
 			err := usecase.Execute(context.Background(), tt.project, tt.zone, tt.vmName)
 
 			if tt.wantErr {
-				if err == nil {
-					t.Errorf("Execute() error = nil, wantErr %v", tt.wantErr)
-					return
-				}
-				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
-					t.Errorf("Execute() error = %v, want error containing %v", err, tt.errContains)
+				assert.Error(t, err, "Execute() should return an error")
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains, "Error should contain %v", tt.errContains)
 				}
 			} else {
-				if err != nil {
-					t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
-				}
+				assert.NoError(t, err, "Execute() should not return an error")
 			}
 		})
 	}

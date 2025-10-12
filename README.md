@@ -9,13 +9,15 @@ A powerful and elegant CLI tool for managing Google Cloud Compute Engine instanc
 ## ✨ Features
 
 - 🚀 **VM Operations**: Start, stop, and monitor GCE instances
-- 📊 **Status Monitoring**: View VM status with uptime tracking
+- 📊 **Status Monitoring**: View VM status with intelligent uptime tracking
+  - Supports days, hours, minutes, and seconds
+  - Automatic format selection: `7d12h45m`, `2h30m`, `5m30s`, `45s`
 - ⚙️ **Machine Type Management**: Change VM configurations on the fly
 - 📅 **Schedule Policies**: Automate VM start/stop schedules
 - 🎨 **Beautiful Output**: Styled terminal output with tables and emojis
 - ⚡ **Parallel Execution**: Fast operations with concurrent API calls
 - 🏗️ **Clean Architecture**: Well-structured codebase following best practices
-- ✅ **Comprehensive Tests**: 70+ test cases with race detection
+- ✅ **Comprehensive Tests**: 80+ test cases with race detection
 
 ## 📦 Installation
 
@@ -93,9 +95,18 @@ gcectl list
 │   Name   │  Project   │     Zone     │ Machine-Type │   Status    │ Schedule │ Uptime  │
 ├──────────┼────────────┼──────────────┼──────────────┼─────────────┼──────────┼─────────┤
 │ my-vm    │ my-project │ us-central1-a│ e2-medium    │ 🟢 RUNNING  │ policy-1 │ 2h30m   │
-│ dev-vm   │ my-project │ us-west1-a   │ n1-standard-1│ 🔴 STOPPED  │          │ N/A     │
+│ dev-vm   │ my-project │ us-west1-a   │ n1-standard-1│ � RUNNING  │          │ 7d12h45m│
+│ test-vm  │ my-project │ asia-east1-a │ e2-small     │ 🟢 RUNNING  │          │ 5m30s   │
+│ old-vm   │ my-project │ us-east1-b   │ e2-micro     │ �🔴 STOPPED  │          │ N/A     │
 └──────────┴────────────┴──────────────┴──────────────┴─────────────┴──────────┴─────────┘
 ```
+
+**Uptime Format:**
+
+- Days: `7d12h45m` (days, hours, minutes)
+- Hours: `2h30m` (hours, minutes)
+- Minutes: `5m30s` (minutes, seconds)
+- Seconds: `45s` (seconds only)
 
 ### Describe a VM
 
@@ -111,7 +122,7 @@ gcectl describe my-vm
 • Zone          : us-central1-a
 • MachineType   : e2-medium
 • Status        : 🟢 RUNNING
-• Uptime        : 2h30m15s
+• Uptime        : 2h30m
 • SchedulePolicy: my-schedule-policy
 ```
 
@@ -315,10 +326,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more details (if available).
 - [x] Set machine type
 - [x] Set/unset schedule policies
 - [x] Clean Architecture implementation
-- [x] Progress indicators
+- [x] Progress indicators with callback pattern
 - [x] Parallel execution
-- [x] Comprehensive test coverage
+- [x] Comprehensive test coverage (80+ tests)
 - [x] Styled console output
+- [x] Intelligent uptime formatting (days/hours/minutes/seconds)
+- [x] Progress start messages
 
 ### Planned 🔜
 

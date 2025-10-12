@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //nolint:gocognit // cognitive complexity is less important than readability in tests
@@ -31,21 +33,15 @@ vm:
 `,
 			wantErr: false,
 			validateFunc: func(t *testing.T, cfg *Config) {
-				if cfg.DefaultProject != "test-project" {
-					t.Errorf("DefaultProject = %v, want test-project", cfg.DefaultProject)
-				}
-				if cfg.DefaultZone != "us-central1-a" {
-					t.Errorf("DefaultZone = %v, want us-central1-a", cfg.DefaultZone)
-				}
-				if len(cfg.VMs) != 2 {
-					t.Fatalf("len(VMs) = %v, want 2", len(cfg.VMs))
-				}
-				if cfg.VMs[0].Name != "vm1" || cfg.VMs[0].Project != "project1" || cfg.VMs[0].Zone != "zone1" {
-					t.Errorf("VM[0] = %+v, want {Name:vm1 Project:project1 Zone:zone1}", cfg.VMs[0])
-				}
-				if cfg.VMs[1].Name != "vm2" || cfg.VMs[1].Project != "project2" || cfg.VMs[1].Zone != "zone2" {
-					t.Errorf("VM[1] = %+v, want {Name:vm2 Project:project2 Zone:zone2}", cfg.VMs[1])
-				}
+				assert.Equal(t, "test-project", cfg.DefaultProject, "DefaultProject should be test-project")
+				assert.Equal(t, "us-central1-a", cfg.DefaultZone, "DefaultZone should be us-central1-a")
+				require.Len(t, cfg.VMs, 2, "VMs should have 2 entries")
+				assert.Equal(t, "vm1", cfg.VMs[0].Name, "VM[0].Name should be vm1")
+				assert.Equal(t, "project1", cfg.VMs[0].Project, "VM[0].Project should be project1")
+				assert.Equal(t, "zone1", cfg.VMs[0].Zone, "VM[0].Zone should be zone1")
+				assert.Equal(t, "vm2", cfg.VMs[1].Name, "VM[1].Name should be vm2")
+				assert.Equal(t, "project2", cfg.VMs[1].Project, "VM[1].Project should be project2")
+				assert.Equal(t, "zone2", cfg.VMs[1].Zone, "VM[1].Zone should be zone2")
 			},
 		},
 		{
@@ -61,21 +57,16 @@ vm:
 `,
 			wantErr: false,
 			validateFunc: func(t *testing.T, cfg *Config) {
-				if len(cfg.VMs) != 3 {
-					t.Fatalf("len(VMs) = %v, want 3", len(cfg.VMs))
-				}
+				require.Len(t, cfg.VMs, 3, "VMs should have 3 entries")
 				// vm1 should inherit both defaults
-				if cfg.VMs[0].Project != "default-proj" || cfg.VMs[0].Zone != "default-zone" {
-					t.Errorf("VM[0] project/zone = %v/%v, want default-proj/default-zone", cfg.VMs[0].Project, cfg.VMs[0].Zone)
-				}
+				assert.Equal(t, "default-proj", cfg.VMs[0].Project, "VM[0].Project should be default-proj")
+				assert.Equal(t, "default-zone", cfg.VMs[0].Zone, "VM[0].Zone should be default-zone")
 				// vm2 has custom project, inherits default zone
-				if cfg.VMs[1].Project != "custom-proj" || cfg.VMs[1].Zone != "default-zone" {
-					t.Errorf("VM[1] project/zone = %v/%v, want custom-proj/default-zone", cfg.VMs[1].Project, cfg.VMs[1].Zone)
-				}
+				assert.Equal(t, "custom-proj", cfg.VMs[1].Project, "VM[1].Project should be custom-proj")
+				assert.Equal(t, "default-zone", cfg.VMs[1].Zone, "VM[1].Zone should be default-zone")
 				// vm3 has custom zone, inherits default project
-				if cfg.VMs[2].Project != "default-proj" || cfg.VMs[2].Zone != "custom-zone" {
-					t.Errorf("VM[2] project/zone = %v/%v, want default-proj/custom-zone", cfg.VMs[2].Project, cfg.VMs[2].Zone)
-				}
+				assert.Equal(t, "default-proj", cfg.VMs[2].Project, "VM[2].Project should be default-proj")
+				assert.Equal(t, "custom-zone", cfg.VMs[2].Zone, "VM[2].Zone should be custom-zone")
 			},
 		},
 		{
@@ -106,23 +97,18 @@ invalid yaml syntax: [
 				confPath = filepath.Join(tmpDir, "config.yaml")
 
 				if writeErr := os.WriteFile(confPath, []byte(tt.yamlContent), 0644); writeErr != nil {
-					t.Fatalf("Failed to create temp config: %v", writeErr)
+					require.NoError(t, writeErr, "Failed to create temp config")
 				}
 			}
 
 			cfg, err := ParseConfig(confPath)
 
 			if tt.wantErr {
-				if err == nil {
-					t.Errorf("ParseConfig() error = nil, wantErr %v", tt.wantErr)
-				}
+				assert.Error(t, err, "ParseConfig() should return an error")
 				return
 			}
 
-			if err != nil {
-				t.Errorf("ParseConfig() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			assert.NoError(t, err, "ParseConfig() should not return an error")
 
 			if tt.validateFunc != nil {
 				tt.validateFunc(t, cfg)
@@ -174,20 +160,14 @@ func TestConfig_GetVMByName(t *testing.T) {
 			vm := cfg.GetVMByName(tt.vmName)
 
 			if tt.wantNil {
-				if vm != nil {
-					t.Errorf("GetVMByName() = %v, want nil", vm)
-				}
+				assert.Nil(t, vm, "GetVMByName() should return nil")
 				return
 			}
 
-			if vm == nil {
-				t.Errorf("GetVMByName() = nil, want %v", tt.wantVM)
-				return
-			}
-
-			if vm.Name != tt.wantVM.Name || vm.Project != tt.wantVM.Project || vm.Zone != tt.wantVM.Zone {
-				t.Errorf("GetVMByName() = %+v, want %+v", vm, tt.wantVM)
-			}
+			require.NotNil(t, vm, "GetVMByName() should not return nil")
+			assert.Equal(t, tt.wantVM.Name, vm.Name, "VM.Name should match")
+			assert.Equal(t, tt.wantVM.Project, vm.Project, "VM.Project should match")
+			assert.Equal(t, tt.wantVM.Zone, vm.Zone, "VM.Zone should match")
 		})
 	}
 }
