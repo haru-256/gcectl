@@ -138,7 +138,7 @@ This project follows **Clean Architecture** principles with strict layer separat
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   Interface Layer                        │
-│           (cmd/, presenter/)                             │
+│           (cmd/, internal/interface/presenter/)          │
 │   • CLI Commands (Cobra)                                 │
 │   • Console Presentation (lipgloss)                      │
 │   • Progress Indicators                                  │
