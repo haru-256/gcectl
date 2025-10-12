@@ -2,6 +2,7 @@ package presenter
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/list"
@@ -125,7 +126,7 @@ type VMListItem struct {
 	MachineType    string
 	Status         model.Status
 	SchedulePolicy string
-	Uptime         string // Pre-calculated uptime string (e.g., "2h30m", "N/A")
+	Uptime         string // Pre-calculated uptime string (e.g., "7d12h45m", "2h30m", "5m30s", "45s", "N/A")
 }
 
 // VMDetail is an alias for VMListItem since they have identical structure.
@@ -168,7 +169,8 @@ func getStatusEmoji(status model.Status) string {
 //   - Machine-Type: VM machine type
 //   - Status: Current status with emoji indicator (🟢 for RUNNING, 🔴 for STOPPED/TERMINATED)
 //   - Schedule: Attached schedule policy name (if any)
-//   - Uptime: How long the VM has been running (for RUNNING VMs only)
+//   - Uptime: How long the VM has been running
+//     Format: "7d12h45m" (days), "2h30m" (hours), "5m30s" (minutes), "45s" (seconds), "N/A" (stopped)
 //
 // The uptime string is expected to be pre-calculated by the use case layer,
 // keeping business logic out of the presentation layer.
@@ -182,6 +184,7 @@ func getStatusEmoji(status model.Status) string {
 //	│   Name   │  Project   │     Zone     │ Machine-Type │   Status    │ Schedule │ Uptime  │
 //	├──────────┼────────────┼──────────────┼──────────────┼─────────────┼──────────┼─────────┤
 //	│ my-vm    │ my-project │ us-central1-a│ e2-medium    │ 🟢 RUNNING  │ policy-1 │ 2h30m   │
+//	│ dev-vm   │ my-project │ us-west1-a   │ n1-standard-1│ 🟢 RUNNING  │          │ 7d12h45m│
 //	└──────────┴────────────┴──────────────┴──────────────┴─────────────┴──────────┴─────────┘
 func (p *ConsolePresenter) RenderVMList(items []VMListItem) {
 	var rows [][]string
@@ -226,7 +229,8 @@ func (p *ConsolePresenter) RenderVMList(items []VMListItem) {
 //   - MachineType: VM machine type
 //   - Status: Current operational status
 //   - SchedulePolicy: Attached schedule policy (if any)
-//   - Uptime: How long the VM has been running (for RUNNING VMs only)
+//   - Uptime: How long the VM has been running
+//     Format: "7d12h45m" (days), "2h30m" (hours), "5m30s" (minutes), "45s" (seconds), "N/A" (stopped)
 //
 // All fields are aligned for readability with bullet points.
 //
@@ -302,9 +306,7 @@ func getItemPaddings(listItemsHeader []string) []string {
 	for i, padding := range paddingNum {
 		paddingsStr[i] = ""
 		if padding > 0 {
-			for j := 0; j < padding; j++ {
-				paddingsStr[i] += " "
-			}
+			paddingsStr[i] = strings.Repeat(" ", padding)
 		}
 	}
 	return paddingsStr

@@ -4,18 +4,19 @@ import (
 	"bytes"
 	"io"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewConsolePresenter(t *testing.T) {
 	presenter := NewConsolePresenter()
 
-	if presenter == nil {
-		t.Fatal("NewConsolePresenter() returned nil")
-	}
+	require.NotNil(t, presenter, "NewConsolePresenter() should not return nil")
+	assert.NotNil(t, presenter.errorStyle, "errorStyle should be initialized")
+	assert.NotNil(t, presenter.successStyle, "successStyle should be initialized")
 }
 
 func TestConsolePresenter_Success(t *testing.T) {
@@ -23,25 +24,22 @@ func TestConsolePresenter_Success(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	presenter.Success("Test success message")
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	if !strings.Contains(output, "[SUCCESS]") {
-		t.Errorf("Success() output = %q, want to contain [SUCCESS]", output)
-	}
-
-	if !strings.Contains(output, "Test success message") {
-		t.Errorf("Success() output = %q, want to contain 'Test success message'", output)
-	}
+	assert.Contains(t, output, "[SUCCESS]", "Output should contain [SUCCESS]")
+	assert.Contains(t, output, "Test success message", "Output should contain the test message")
 }
 
 func TestConsolePresenter_Error(t *testing.T) {
@@ -49,25 +47,22 @@ func TestConsolePresenter_Error(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	presenter.Error("Test error message")
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	if !strings.Contains(output, "[ERROR]") {
-		t.Errorf("Error() output = %q, want to contain [ERROR]", output)
-	}
-
-	if !strings.Contains(output, "Test error message") {
-		t.Errorf("Error() output = %q, want to contain 'Test error message'", output)
-	}
+	assert.Contains(t, output, "[ERROR]", "Output should contain [ERROR]")
+	assert.Contains(t, output, "Test error message", "Output should contain the test message")
 }
 
 func TestConsolePresenter_Progress(t *testing.T) {
@@ -75,21 +70,21 @@ func TestConsolePresenter_Progress(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	presenter.Progress()
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	if output != "." {
-		t.Errorf("Progress() output = %q, want '.'", output)
-	}
+	assert.Equal(t, ".", output, "Progress() should output a single dot")
 }
 
 func TestConsolePresenter_ProgressDone(t *testing.T) {
@@ -97,21 +92,21 @@ func TestConsolePresenter_ProgressDone(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	presenter.ProgressDone()
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	if output != "\n" {
-		t.Errorf("ProgressDone() output = %q, want newline", output)
-	}
+	assert.Equal(t, "\n", output, "ProgressDone() should output a newline")
 }
 
 func TestConsolePresenter_ProgressStart(t *testing.T) {
@@ -119,22 +114,22 @@ func TestConsolePresenter_ProgressStart(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	message := "Starting VM test-vm"
 	presenter.ProgressStart(message)
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	if output != message {
-		t.Errorf("ProgressStart() output = %q, want %q", output, message)
-	}
+	assert.Equal(t, message, output, "ProgressStart() should output the provided message")
 }
 
 func TestConsolePresenter_ProgressSequence(t *testing.T) {
@@ -142,7 +137,8 @@ func TestConsolePresenter_ProgressSequence(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	// Simulate a sequence of progress updates
@@ -151,17 +147,15 @@ func TestConsolePresenter_ProgressSequence(t *testing.T) {
 	presenter.Progress()
 	presenter.ProgressDone()
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	expected := "...\n"
-	if output != expected {
-		t.Errorf("Progress sequence output = %q, want %q", output, expected)
-	}
+	assert.Equal(t, "...\n", output, "Progress sequence should output dots followed by newline")
 }
 
 func TestConsolePresenter_ProgressStartWithSequence(t *testing.T) {
@@ -169,7 +163,8 @@ func TestConsolePresenter_ProgressStartWithSequence(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	// Simulate a complete progress sequence with start message
@@ -178,17 +173,15 @@ func TestConsolePresenter_ProgressStartWithSequence(t *testing.T) {
 	presenter.Progress()
 	presenter.ProgressDone()
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	expected := "Starting VM test-vm..\n"
-	if output != expected {
-		t.Errorf("Progress start + sequence output = %q, want %q", output, expected)
-	}
+	assert.Equal(t, "Starting VM test-vm..\n", output, "Complete progress sequence should show message, dots, and newline")
 }
 
 func TestConsolePresenter_RenderVMList(t *testing.T) {
@@ -202,7 +195,7 @@ func TestConsolePresenter_RenderVMList(t *testing.T) {
 			MachineType:    "e2-medium",
 			Status:         model.StatusRunning,
 			SchedulePolicy: "policy1",
-			Uptime:         "2h30m15s",
+			Uptime:         "2h30m",
 		},
 		{
 			Name:           "vm2",
@@ -217,43 +210,33 @@ func TestConsolePresenter_RenderVMList(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	presenter.RenderVMList(items)
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
 	// Check that VM names appear in output
-	if !strings.Contains(output, "vm1") {
-		t.Errorf("RenderVMList() output doesn't contain 'vm1'")
-	}
-
-	if !strings.Contains(output, "vm2") {
-		t.Errorf("RenderVMList() output doesn't contain 'vm2'")
-	}
+	assert.Contains(t, output, "vm1", "Output should contain vm1")
+	assert.Contains(t, output, "vm2", "Output should contain vm2")
 
 	// Check that table headers appear
 	expectedHeaders := []string{"Name", "Project", "Zone", "Machine-Type", "Status"}
 	for _, header := range expectedHeaders {
-		if !strings.Contains(output, header) {
-			t.Errorf("RenderVMList() output doesn't contain header '%s'", header)
-		}
+		assert.Contains(t, output, header, "Output should contain header '%s'", header)
 	}
 
 	// Check that uptime values appear
-	if !strings.Contains(output, "2h30m15s") {
-		t.Errorf("RenderVMList() output doesn't contain uptime '2h30m15s'")
-	}
-
-	if !strings.Contains(output, "N/A") {
-		t.Errorf("RenderVMList() output doesn't contain uptime 'N/A'")
-	}
+	assert.Contains(t, output, "2h30m", "Output should contain uptime '2h30m'")
+	assert.Contains(t, output, "N/A", "Output should contain uptime 'N/A'")
 }
 
 func TestConsolePresenter_RenderVMDetail(t *testing.T) {
@@ -271,16 +254,18 @@ func TestConsolePresenter_RenderVMDetail(t *testing.T) {
 
 	// Capture stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
 	presenter.RenderVMDetail(detail)
 
-	_ = w.Close()
+	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	_, err = io.Copy(&buf, r)
+	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
 	// Check that VM details appear in output
@@ -295,9 +280,7 @@ func TestConsolePresenter_RenderVMDetail(t *testing.T) {
 	}
 
 	for _, field := range expectedFields {
-		if !strings.Contains(output, field) {
-			t.Errorf("RenderVMDetail() output doesn't contain '%s'", field)
-		}
+		assert.Contains(t, output, field, "Output should contain field '%s'", field)
 	}
 }
 
@@ -338,9 +321,7 @@ func TestGetStatusEmoji(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := getStatusEmoji(tt.status)
-			if got != tt.want {
-				t.Errorf("getStatusEmoji(%v) = %v, want %v", tt.status, got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "getStatusEmoji(%v) should return %v", tt.status, tt.want)
 		})
 	}
 }
@@ -372,14 +353,12 @@ func TestGetItemPaddings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			paddings := getItemPaddings(tt.headers)
 
-			if len(paddings) != tt.wantLen {
-				t.Errorf("getItemPaddings() returned %d paddings, want %d", len(paddings), tt.wantLen)
-			}
+			assert.Len(t, paddings, tt.wantLen, "getItemPaddings() should return %d paddings", tt.wantLen)
 
 			// Check that paddings are strings (possibly empty)
 			for i, padding := range paddings {
-				if padding != "" && !strings.HasPrefix(padding+"x", " ") {
-					t.Errorf("padding[%d] = %q is not a valid padding string", i, padding)
+				if padding != "" {
+					assert.True(t, len(padding) > 0 && padding[0] == ' ', "padding[%d] = %q should start with space or be empty", i, padding)
 				}
 			}
 		})

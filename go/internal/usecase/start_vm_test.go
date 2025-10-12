@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/stretchr/testify/assert"
 )
 
 // mockVMRepository is a mock implementation of repository.VMRepository for testing
@@ -177,33 +178,13 @@ func TestStartVMUseCase_Execute(t *testing.T) {
 			err := usecase.Execute(context.Background(), tt.project, tt.zone, tt.vmName)
 
 			if tt.wantErr {
-				if err == nil {
-					t.Errorf("Execute() error = nil, wantErr %v", tt.wantErr)
-					return
-				}
-				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
-					t.Errorf("Execute() error = %v, want error containing %v", err, tt.errContains)
+				assert.Error(t, err, "Execute() should return an error")
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains, "Error should contain %v", tt.errContains)
 				}
 			} else {
-				if err != nil {
-					t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
-				}
+				assert.NoError(t, err, "Execute() should not return an error")
 			}
 		})
 	}
-}
-
-// contains checks if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))
-}
-
-func stringContains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

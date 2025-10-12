@@ -64,7 +64,9 @@ gcectl set schedule <vm_name> <policy_name> --un
 │   Name   │  Project   │     Zone     │ Machine-Type │   Status    │ Schedule │ Uptime  │
 ├──────────┼────────────┼──────────────┼──────────────┼─────────────┼──────────┼─────────┤
 │ my-vm    │ my-project │ us-central1-a│ e2-medium    │ 🟢 RUNNING  │ policy-1 │ 2h30m   │
-│ test-vm  │ my-project │ us-west1-a   │ n1-standard-1│ 🔴 STOPPED  │          │ N/A     │
+│ dev-vm   │ my-project │ us-west1-a   │ n1-standard-1│ � RUNNING  │          │ 7d12h45m│
+│ test-vm  │ my-project │ asia-east1-a │ e2-small     │ 🟢 RUNNING  │          │ 5m30s   │
+│ old-vm   │ my-project │ us-east1-b   │ e2-micro     │ �🔴 STOPPED  │          │ N/A     │
 └──────────┴────────────┴──────────────┴──────────────┴─────────────┴──────────┴─────────┘
 ```
 
@@ -76,7 +78,7 @@ gcectl set schedule <vm_name> <policy_name> --un
 • Zone          : us-central1-a
 • MachineType   : e2-medium
 • Status        : 🟢 RUNNING
-• Uptime        : 2h30m15s
+• Uptime        : 2h30m
 • SchedulePolicy: my-schedule-policy
 ```
 
@@ -202,13 +204,16 @@ The application is organized into distinct layers, each with specific responsibi
 - **Domain Layer**: Unit tests for business rules (CanStart, CanStop, Uptime)
 - **Use Case Layer**: Tests with mock repositories for business logic validation
   - Tests for shared utilities like `calculateUptimeString()`
+  - Tests for uptime formatting (`formatUptime()`)
+    - Supports days, hours, minutes, and seconds
+    - Format: `7d12h45m` (days), `2h30m` (hours), `5m30s` (minutes), `45s` (seconds)
   - Tests for describe and list operations
 - **Infrastructure Layer**: Integration tests for configuration parsing
 - **Presenter Layer**: Output validation tests
-  - Progress indicator tests (`Progress()`, `ProgressDone()`)
+  - Progress indicator tests (`Progress()`, `ProgressDone()`, `ProgressStart()`)
   - Status emoji rendering tests
 - All tests use table-driven test pattern for clarity and maintainability
-- 68+ test cases with race detection enabled
+- 80+ test cases with race detection enabled
 
 ## Directory Structure
 
