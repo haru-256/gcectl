@@ -9,13 +9,12 @@ import (
 )
 
 func TestCalculateUptimeString(t *testing.T) {
-	//nolint:govet // Test struct prioritizes readability over field alignment
 	tests := []struct {
-		name   string
 		vm     *model.VM
 		now    time.Time
+		name   string
 		want   string
-		wantNA bool // True if we expect "N/A"
+		wantNA bool
 	}{
 		{
 			name: "running VM with valid uptime (hours)",
@@ -136,8 +135,8 @@ func TestCalculateUptimeString(t *testing.T) {
 
 func TestFormatUptime(t *testing.T) {
 	tests := []struct {
-		name     string
 		duration time.Duration
+		name     string
 		want     string
 	}{
 		{
