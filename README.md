@@ -32,7 +32,7 @@ A powerful and elegant CLI tool for managing Google Cloud Compute Engine instanc
 git clone https://github.com/haru-256/gcectl.git
 cd gcectl/go
 make build
-# Binary will be available at bin/gcectl
+# Binary will be available at bin/main
 ```
 
 ## 🚀 Quick Start
