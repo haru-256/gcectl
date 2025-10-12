@@ -72,10 +72,10 @@ gcectl off my-vm
 gcectl set machine-type my-vm e2-medium
 
 # Set schedule policy
-gcectl set schedule my-vm my-schedule-policy
+gcectl set schedule-policy my-vm my-schedule-policy
 
 # Unset schedule policy
-gcectl set schedule my-vm my-schedule-policy --un
+gcectl set schedule-policy my-vm my-schedule-policy --un
 ```
 
 ## 📖 Usage Examples
