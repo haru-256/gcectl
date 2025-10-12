@@ -358,7 +358,7 @@ func TestGetItemPaddings(t *testing.T) {
 			// Check that paddings are strings (possibly empty)
 			for i, padding := range paddings {
 				if padding != "" {
-					assert.True(t, len(padding) > 0 && padding[0] == ' ', "padding[%d] = %q should start with space or be empty", i, padding)
+					assert.Empty(t, strings.TrimSpace(padding), "padding[%d] = %q should only contain spaces", i, padding)
 				}
 			}
 		})
