@@ -135,9 +135,9 @@ func TestCalculateUptimeString(t *testing.T) {
 
 func TestFormatUptime(t *testing.T) {
 	tests := []struct {
-		duration time.Duration
 		name     string
 		want     string
+		duration time.Duration
 	}{
 		{
 			name:     "days, hours and minutes",
