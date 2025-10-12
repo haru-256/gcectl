@@ -218,7 +218,7 @@ go test ./internal/usecase/... -v
 ```bash
 cd go
 make build
-# Output: bin/gcectl
+# Output: bin/main
 ```
 
 ### Lint
