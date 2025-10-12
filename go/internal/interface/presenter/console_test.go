@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
