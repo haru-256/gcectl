@@ -121,21 +121,20 @@ func TestListVMsUseCase_Execute(t *testing.T) {
 			for i, item := range items {
 				assert.Equal(t, tt.mockVMs[i], item.VM, "Execute() item[%d].VM should match", i)
 
-				// For uptime, we need to be flexible with time-based tests
-				// Check if it's "N/A" or a valid duration string
+				// For uptime, check if it's "N/A" or not
+				// Detailed format testing is covered in TestFormatUptime
 				if tt.wantUptimes[i] == "N/A" {
 					assert.Equal(t, "N/A", item.Uptime, "Execute() item[%d].Uptime should be N/A", i)
 				} else {
-					// For running VMs, just verify it's not "N/A" and is a valid duration format
+					// For running VMs, just verify it's not "N/A"
 					assert.NotEqual(t, "N/A", item.Uptime, "Execute() item[%d].Uptime should not be N/A", i)
-					// Verify it's a parseable duration
-					_, parseErr := time.ParseDuration(item.Uptime)
-					assert.NoError(t, parseErr, "Execute() item[%d].Uptime = %s should be a valid duration", i, item.Uptime)
 				}
 			}
 		})
 	}
-} // Helper function to create time pointers
+}
+
+// Helper function to create time pointers
 func timePtr(t time.Time) *time.Time {
 	return &t
 }
