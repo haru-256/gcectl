@@ -34,14 +34,14 @@ import (
 var (
 	// CnfPath is the path to the configuration file
 	CnfPath string
-	// mainから渡された値を保存するパッケージ内変数
+	// Package-level variables to store values passed from main.
 	appVersion string
 	appCommit  string
 	appDate    string
 )
 
-// SetVersionInfo は main.go から呼び出され、バージョン情報をセットする
-// GoReleaser の ldflags により上書きされるために、公開関数として定義
+// SetVersionInfo is called from main.go to set the version information.
+// It's an exported function so that its variables can be overwritten by GoReleaser's ldflags.
 func SetVersionInfo(version, commit, date string) {
 	appVersion = version
 	appCommit = commit
