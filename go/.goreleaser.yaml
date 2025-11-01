@@ -53,9 +53,6 @@ changelog:
       - "^test:"
 
 release:
-  github:
-    owner: haru-256
-    name: gcectl
   draft: false
   prerelease: auto
   make_latest: true
