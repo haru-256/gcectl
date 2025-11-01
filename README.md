@@ -42,6 +42,22 @@ make build
 # Binary will be available at bin/main
 ```
 
+## Completion
+
+You can enable shell completion for bash, zsh, or fish. Please refer to the following commands result.
+
+```bash
+gcectl completion bash --help # for bash
+gcectl completion zsh --help  # for zsh
+gcectl completion fish --help # for fish
+```
+
+For example, in fish, you can enable completion by running:
+
+```bash
+gcectl completion fish > "${HOME}/.config/fish/completions/gcectl.fish"
+```
+
 ## 🚀 Quick Start
 
 ### Configuration
