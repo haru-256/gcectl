@@ -63,7 +63,7 @@ func offRun(cmd *cobra.Command, args []string) {
 	defer stop()
 
 	err = console.ExecuteWithProgress(ctx,
-fmt.Sprintf("Stopping VMs %s", strings.Join(vmNames, ", ")),
+		fmt.Sprintf("Stopping VMs %s", strings.Join(vmNames, ", ")),
 		func(ctx context.Context) error {
 			return stopVMUseCase.Execute(ctx, vms)
 		})
