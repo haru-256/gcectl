@@ -9,15 +9,17 @@ A powerful and elegant CLI tool for managing Google Cloud Compute Engine instanc
 ## ✨ Features
 
 - 🚀 **VM Operations**: Start, stop, and monitor GCE instances
+    - Support for multiple VMs in parallel
+    - Fail-fast behavior for safety
 - 📊 **Status Monitoring**: View VM status with intelligent uptime tracking
-  - Supports days, hours, minutes, and seconds
-  - Automatic format selection: `7d12h45m`, `2h30m`, `5m30s`, `45s`
+    - Supports days, hours, minutes, and seconds
+    - Automatic format selection: `7d12h45m`, `2h30m`, `5m30s`, `45s`
 - ⚙️ **Machine Type Management**: Change VM configurations on the fly
 - 📅 **Schedule Policies**: Automate VM start/stop schedules
 - 🎨 **Beautiful Output**: Styled terminal output with tables and emojis
 - ⚡ **Parallel Execution**: Fast operations with concurrent API calls
 - 🏗️ **Clean Architecture**: Well-structured codebase following best practices
-- ✅ **Comprehensive Tests**: 80+ test cases with race detection
+- ✅ **Comprehensive Tests**: 80+ test cases with race detection and integration tests
 
 ## 📦 Installation
 
@@ -64,11 +66,13 @@ gcectl list
 # View detailed information about a VM
 gcectl describe my-vm
 
-# Start a VM
+# Start one or more VMs
 gcectl on my-vm
+gcectl on vm1 vm2 vm3
 
-# Stop a VM
+# Stop one or more VMs
 gcectl off my-vm
+gcectl off vm1 vm2
 
 # Change machine type (VM must be stopped)
 gcectl set machine-type my-vm e2-medium
@@ -129,9 +133,29 @@ gcectl describe my-vm
 ### Start a VM
 
 ```bash
+# Start a single VM
 $ gcectl on my-vm
 Starting VM my-vm...
 [SUCCESS] | VM my-vm started successfully
+
+# Start multiple VMs in parallel
+$ gcectl on vm1 vm2 vm3
+Starting 3 VMs...
+[SUCCESS] | All VMs started successfully
+```
+
+### Stop VMs
+
+```bash
+# Stop a single VM
+$ gcectl off my-vm
+Stopping VM my-vm...
+[SUCCESS] | VM my-vm stopped successfully
+
+# Stop multiple VMs in parallel
+$ gcectl off vm1 vm2
+Stopping 2 VMs...
+[SUCCESS] | All VMs stopped successfully
 ```
 
 ### Change Machine Type
@@ -160,6 +184,7 @@ This project follows **Clean Architecture** principles with strict layer separat
 │                 (usecase/)                               │
 │   • Business Logic Orchestration                         │
 │   • VM Operations (Start, Stop, Update)                  │
+│   • Parallel Execution with errgroup                     │
 │   • Data Retrieval (List, Describe)                      │
 │   • Shared Utilities (Uptime Calculation)                │
 └────────────────┬────────────────────────────────────────┘
@@ -177,7 +202,6 @@ This project follows **Clean Architecture** principles with strict layer separat
 │      (infrastructure/gcp/, infrastructure/config/)       │
 │   • GCP Compute Engine API Client                        │
 │   • Configuration Management (YAML)                      │
-│   • Progress Callback Implementation                     │
 │   • Logging & Error Handling                             │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -186,8 +210,9 @@ This project follows **Clean Architecture** principles with strict layer separat
 
 - **Dependency Rule**: Dependencies point inward only
 - **Layer Independence**: Inner layers have no knowledge of outer layers
-- **Callback Pattern**: Clean separation between infrastructure and presentation
+- **Progress Control**: Progress display managed in presentation layer (cmd)
 - **Repository Pattern**: Abstract external API interactions
+- **Parallel Execution**: Multiple VM operations using errgroup
 - **YAGNI**: Use cases applied only where business logic exists
 
 For detailed architecture documentation, see [go/README.md](go/README.md).
@@ -214,10 +239,10 @@ go test ./internal/usecase/... -v
 
 **Test Coverage:**
 
-- ✅ 70+ test cases
+- ✅ 80+ test cases
 - ✅ Domain layer: Business rule tests
 - ✅ Use case layer: Mock-based integration tests
-- ✅ Infrastructure layer: Configuration parsing tests
+- ✅ Infrastructure layer: Integration tests for GCP operations
 - ✅ Presenter layer: Output validation tests
 - ✅ Race detection enabled
 - ✅ Table-driven test patterns
@@ -320,31 +345,30 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more details (if available).
 
 ### Completed ✅
 
-- [x] Start/Stop VM operations
+- [x] Start/Stop VM operations (single and multiple VMs)
 - [x] List VMs with status and uptime
 - [x] Describe VM details
 - [x] Set machine type
 - [x] Set/unset schedule policies
 - [x] Clean Architecture implementation
-- [x] Progress indicators with callback pattern
-- [x] Parallel execution
+- [x] Progress indicators with ExecuteWithProgress helper
+- [x] Parallel execution for multiple VMs (errgroup)
 - [x] Comprehensive test coverage (80+ tests)
+- [x] Integration tests for GCP operations
 - [x] Styled console output
 - [x] Intelligent uptime formatting (days/hours/minutes/seconds)
-- [x] Progress start messages
+- [x] Success logging for each operation
 
 ### Planned 🔜
 
 - [ ] Interactive TUI mode (bubbletea)
 - [ ] List available machine types
 - [ ] VM cost estimation
-- [ ] Batch operations (multiple VMs)
 - [ ] Configuration validation command
 - [ ] Export VM details (JSON/YAML)
 - [ ] GoReleaser for multi-platform releases
 - [ ] Homebrew formula
 - [ ] Docker image
-- [ ] Integration tests with GCP emulator
 
 ## 📄 License
 

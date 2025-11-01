@@ -488,40 +488,6 @@ func (r *VMRepository) waitOperator(ctx context.Context, op *compute.Operation) 
 		return fmt.Errorf("operation is nil")
 	}
 	return op.Wait(ctx)
-	// eg, ctx := errgroup.WithContext(ctx)
-	// done := make(chan struct{})
-	// eg.Go(func() error {
-	// 	// Wait for the operation to complete
-	// 	if err := op.Wait(ctx); err != nil {
-	// 		return err
-	// 	}
-	// 	close(done)
-	// 	return nil
-	// })
-
-	// // Only start progress reporting if callback is set
-	// if r.progressCallback != nil {
-	// 	eg.Go(func() error {
-	// 		ticker := time.NewTicker(1 * time.Second)
-	// 		defer ticker.Stop()
-
-	// 		for {
-	// 			select {
-	// 			case <-ctx.Done(): // Context canceled, exit the goroutine
-	// 				return ctx.Err()
-	// 			case <-done: // Operation is done, exit the goroutine
-	// 				return nil
-	// 			case <-ticker.C: // One second has passed
-	// 				r.progressCallback()
-	// 			}
-	// 		}
-	// 	})
-	// }
-
-	// if err := eg.Wait(); err != nil {
-	// 	return fmt.Errorf("failed to wait for operation: %v", err)
-	// }
-	// return nil
 }
 
 var _ repository.VMRepository = (*VMRepository)(nil)
