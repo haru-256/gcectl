@@ -1,9 +1,7 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -61,20 +59,25 @@ func onRun(cmd *cobra.Command, args []string) {
 
 	// 依存性の注入
 	vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
-	// Set progress callback to display dots during operation
-	vmRepo.SetProgressCallback(console.Progress)
-	startVMUseCase := usecase.NewStartVMUseCase(vmRepo)
+	startVMUseCase := usecase.NewStartVMUseCase(vmRepo, infraLog.DefaultLogger)
 
 	// Turn on the instances
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	console.ProgressStart(fmt.Sprintf("Starting VMs %s", strings.Join(vmNames, ", ")))
-	if err = startVMUseCase.Execute(ctx, vms); err != nil {
-		console.ProgressDone()
+
+	err = console.ExecuteWithProgress(
+		ctx,
+		fmt.Sprintf("Starting VMs %s", strings.Join(vmNames, ", ")),
+		func(ctx context.Context) error {
+			return startVMUseCase.Execute(ctx, vms)
+		},
+	)
+
+	if err != nil {
 		console.Error(fmt.Sprintf("Failed to turn on the instances: %v\n", err))
 		os.Exit(1)
 	}
-	console.ProgressDone()
+
 	console.Success(fmt.Sprintf("Turned on the instances: %v\n", strings.Join(vmNames, ", ")))
 }
 

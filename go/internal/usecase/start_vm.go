@@ -6,17 +6,19 @@ import (
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 	"golang.org/x/sync/errgroup"
 )
 
 // StartVMUseCase handles the business logic for starting a VM
 type StartVMUseCase struct {
 	vmRepo repository.VMRepository
+	logger log.Logger
 }
 
 // NewStartVMUseCase creates a new instance of StartVMUseCase
-func NewStartVMUseCase(vmRepo repository.VMRepository) *StartVMUseCase {
-	return &StartVMUseCase{vmRepo: vmRepo}
+func NewStartVMUseCase(vmRepo repository.VMRepository, logger log.Logger) *StartVMUseCase {
+	return &StartVMUseCase{vmRepo: vmRepo, logger: logger}
 }
 
 // Execute starts multiple VM instances in parallel.
@@ -54,6 +56,7 @@ func (uc *StartVMUseCase) Execute(ctx context.Context, vms []*model.VM) error {
 				return fmt.Errorf("VM %s: failed to start: %w", foundVM.Name, startErr)
 			}
 
+			uc.logger.Infof("✓ Successfully started VM %s", foundVM.Name)
 			return nil
 		})
 	}

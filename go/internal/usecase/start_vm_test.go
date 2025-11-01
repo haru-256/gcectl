@@ -6,10 +6,13 @@ import (
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 	mock_repository "github.com/haru-256/gcectl/internal/mock/repository"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+var logger = log.NewLogger()
 
 func TestStartVMUseCase_Execute(t *testing.T) {
 	tests := []struct {
@@ -236,7 +239,7 @@ func TestStartVMUseCase_Execute(t *testing.T) {
 			mockRepo := mock_repository.NewMockVMRepository(ctrl)
 			tt.setupMock(mockRepo)
 
-			usecase := NewStartVMUseCase(mockRepo)
+			usecase := NewStartVMUseCase(mockRepo, logger)
 			err := usecase.Execute(context.Background(), tt.vms)
 
 			if tt.wantErr {

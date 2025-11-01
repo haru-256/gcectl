@@ -6,17 +6,19 @@ import (
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 	"golang.org/x/sync/errgroup"
 )
 
 // StopVMUseCase handles the business logic for stopping a VM
 type StopVMUseCase struct {
 	vmRepo repository.VMRepository
+	logger log.Logger
 }
 
 // NewStopVMUseCase creates a new instance of StopVMUseCase
-func NewStopVMUseCase(vmRepo repository.VMRepository) *StopVMUseCase {
-	return &StopVMUseCase{vmRepo: vmRepo}
+func NewStopVMUseCase(vmRepo repository.VMRepository, logger log.Logger) *StopVMUseCase {
+	return &StopVMUseCase{vmRepo: vmRepo, logger: logger}
 }
 
 // Execute stops multiple VM instances in parallel after validating each can be stopped.
@@ -53,6 +55,7 @@ func (uc *StopVMUseCase) Execute(ctx context.Context, vms []*model.VM) error {
 				return fmt.Errorf("VM %s: failed to stop: %w", foundVM.Name, stopErr)
 			}
 
+			uc.logger.Infof("✓ Successfully stopped VM %s", foundVM.Name)
 			return nil
 		})
 	}

@@ -6,11 +6,14 @@ import (
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 	mock_repository "github.com/haru-256/gcectl/internal/mock/repository"
 	"github.com/haru-256/gcectl/internal/usecase/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+var loggerForUnsetSchedule = log.NewLogger()
 
 func TestUnsetSchedulePolicyUseCase_Execute(t *testing.T) {
 	tests := []struct {
@@ -107,7 +110,7 @@ func TestUnsetSchedulePolicyUseCase_Execute(t *testing.T) {
 			mockRepo := mock_repository.NewMockVMRepository(ctrl)
 			tt.setupMock(mockRepo)
 
-			usecase := NewUnsetSchedulePolicyUseCase(mockRepo)
+			usecase := NewUnsetSchedulePolicyUseCase(mockRepo, loggerForUnsetSchedule)
 			err := usecase.Execute(context.Background(), tt.project, tt.zone, tt.vmName, tt.policyName)
 
 			if tt.wantErr {

@@ -6,11 +6,14 @@ import (
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 	mock_repository "github.com/haru-256/gcectl/internal/mock/repository"
 	"github.com/haru-256/gcectl/internal/usecase/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+var loggerForUpdateMachineType = log.NewLogger()
 
 func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 	tests := []struct {
@@ -155,7 +158,7 @@ func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 			mockRepo := mock_repository.NewMockVMRepository(ctrl)
 			tt.setupMock(mockRepo)
 
-			usecase := NewUpdateMachineTypeUseCase(mockRepo)
+			usecase := NewUpdateMachineTypeUseCase(mockRepo, loggerForUpdateMachineType)
 			err := usecase.Execute(context.Background(), tt.project, tt.zone, tt.vmName, tt.machineType)
 
 			if tt.wantErr {

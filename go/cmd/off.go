@@ -1,9 +1,7 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -28,59 +26,61 @@ Example:
   gcectl off <vm_name>
   gcectl off <vm_name1> <vm_name2> <vm_name3>`,
 	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		console := presenter.NewConsolePresenter()
-		vmNames := args
-		infraLog.DefaultLogger.Debugf("Turning off the instances: %v", vmNames)
+	Run:  offRun,
+}
 
-		// parse config
-		cnf, err := config.ParseConfig(CnfPath)
-		if err != nil {
-			console.Error(fmt.Sprintf("Failed to parse config: %v\n", err))
+func offRun(cmd *cobra.Command, args []string) {
+	console := presenter.NewConsolePresenter()
+	vmNames := args
+	infraLog.DefaultLogger.Debugf("Turning off the instances: %v", vmNames)
+
+	// parse config
+	cnf, err := config.ParseConfig(CnfPath)
+	if err != nil {
+		console.Error(fmt.Sprintf("Failed to parse config: %v\n", err))
+		os.Exit(1)
+	}
+	infraLog.DefaultLogger.Debug(fmt.Sprintf("Config: %+v", cnf))
+
+	// domain entity変換
+	var vms []*model.VM
+	for _, vmName := range vmNames {
+		vm := cnf.GetVMByName(vmName)
+		if vm == nil {
+			console.Error(fmt.Sprintf("VM %s not found", vmName))
 			os.Exit(1)
 		}
-		infraLog.DefaultLogger.Debug(fmt.Sprintf("Config: %+v", cnf))
+		vms = append(vms, vm)
+	}
 
-		// domain entity変換
-		var vms []*model.VM
-		for _, vmName := range vmNames {
-			vm := cnf.GetVMByName(vmName)
-			if vm == nil {
-				console.Error(fmt.Sprintf("VM %s not found", vmName))
-				os.Exit(1)
-			}
-			vms = append(vms, vm)
-		}
+	// 依存性の注入
+	vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
+	stopVMUseCase := usecase.NewStopVMUseCase(vmRepo, infraLog.DefaultLogger)
 
-		// 依存性の注入
-		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
-		// Set progress callback to display dots during operation
-		vmRepo.SetProgressCallback(console.Progress)
-		stopVMUseCase := usecase.NewStopVMUseCase(vmRepo)
+	// Turn off the instances
+	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-		// Turn off the instances
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
+	var message string
+	if len(vms) == 1 {
+		message = fmt.Sprintf("Stopping VM %s", vms[0].Name)
+	} else {
+		message = fmt.Sprintf("Stopping %d VMs", len(vms))
+	}
 
-		if len(vms) == 1 {
-			console.ProgressStart(fmt.Sprintf("Stopping VM %s", vms[0].Name))
-		} else {
-			console.ProgressStart(fmt.Sprintf("Stopping %d VMs", len(vms)))
-		}
+	err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+		return stopVMUseCase.Execute(ctx, vms)
+	})
+	if err != nil {
+		console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v\n", err))
+		os.Exit(1)
+	}
 
-		if err = stopVMUseCase.Execute(ctx, vms); err != nil {
-			console.ProgressDone()
-			console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v\n", err))
-			os.Exit(1)
-		}
-		console.ProgressDone()
-
-		if len(vms) == 1 {
-			console.Success(fmt.Sprintf("Turned off the instance: %v\n", vms[0].Name))
-		} else {
-			console.Success(fmt.Sprintf("Turned off %d instances\n", len(vms)))
-		}
-	},
+	if len(vms) == 1 {
+		console.Success(fmt.Sprintf("Turned off the instance: %v\n", vms[0].Name))
+	} else {
+		console.Success(fmt.Sprintf("Turned off %d instances\n", len(vms)))
+	}
 }
 
 func init() {

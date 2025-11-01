@@ -1,6 +1,7 @@
 package set
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -54,33 +55,44 @@ Example:
 
 		// 依存性の注入
 		vmRepo := gcp.NewVMRepository(cnfPath, infraLog.DefaultLogger)
-		// Set progress callback to display dots during operation
-		vmRepo.SetProgressCallback(console.Progress)
 
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
 		if unset {
 			infraLog.DefaultLogger.Debugf("Unset schedule-policy")
-			unsetSchedulePolicyUseCase := usecase.NewUnsetSchedulePolicyUseCase(vmRepo)
-			console.ProgressStart(fmt.Sprintf("Unsetting schedule policy for VM %s", vmName))
-			if err = unsetSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName); err != nil {
-				console.ProgressDone()
+			unsetSchedulePolicyUseCase := usecase.NewUnsetSchedulePolicyUseCase(vmRepo, infraLog.DefaultLogger)
+
+			var message string
+			if vm.SchedulePolicy != "" {
+				message = fmt.Sprintf("Unsetting schedule policy %s for VM %s", vm.SchedulePolicy, vmName)
+			} else {
+				message = fmt.Sprintf("Unsetting schedule policy for VM %s", vmName)
+			}
+
+			err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+				return unsetSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName)
+			})
+
+			if err != nil {
 				console.Error(fmt.Sprintf("Failed to unset schedule-policy: %v\n", err))
 				os.Exit(1)
 			}
-			console.ProgressDone()
 			console.Success(fmt.Sprintf("Unset schedule-policy: %v\n", policyName))
 		} else {
 			infraLog.DefaultLogger.Debugf("Set schedule-policy")
-			setSchedulePolicyUseCase := usecase.NewSetSchedulePolicyUseCase(vmRepo)
-			console.ProgressStart(fmt.Sprintf("Setting schedule policy for VM %s", vmName))
-			if err = setSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName); err != nil {
-				console.ProgressDone()
+			setSchedulePolicyUseCase := usecase.NewSetSchedulePolicyUseCase(vmRepo, infraLog.DefaultLogger)
+
+			message := fmt.Sprintf("Setting schedule policy %s for VM %s", policyName, vmName)
+
+			err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+				return setSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName)
+			})
+
+			if err != nil {
 				console.Error(fmt.Sprintf("Failed to set schedule-policy: %v\n", err))
 				os.Exit(1)
 			}
-			console.ProgressDone()
 			console.Success(fmt.Sprintf("Set schedule-policy: %v\n", policyName))
 		}
 	},

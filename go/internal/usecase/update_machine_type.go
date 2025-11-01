@@ -6,16 +6,18 @@ import (
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
 
 // UpdateMachineTypeUseCase handles the business logic for updating VM machine type
 type UpdateMachineTypeUseCase struct {
 	vmRepo repository.VMRepository
+	logger log.Logger
 }
 
 // NewUpdateMachineTypeUseCase creates a new instance of UpdateMachineTypeUseCase
-func NewUpdateMachineTypeUseCase(vmRepo repository.VMRepository) *UpdateMachineTypeUseCase {
-	return &UpdateMachineTypeUseCase{vmRepo: vmRepo}
+func NewUpdateMachineTypeUseCase(vmRepo repository.VMRepository, logger log.Logger) *UpdateMachineTypeUseCase {
+	return &UpdateMachineTypeUseCase{vmRepo: vmRepo, logger: logger}
 }
 
 // Execute updates the machine type of a VM after validating it is in a stopped state.
@@ -69,5 +71,6 @@ func (uc *UpdateMachineTypeUseCase) Execute(ctx context.Context, project, zone, 
 		return fmt.Errorf("failed to update machine type: %w", updateErr)
 	}
 
+	uc.logger.Infof("✓ Successfully updated machine type to %s for VM %s", machineType, foundVM.Name)
 	return nil
 }

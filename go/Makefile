@@ -10,7 +10,7 @@ endif
 
 .PHONY: test
 test: ## Execute tests
-	go test -v -race -shuffle=on ./...
+	go test -v -race -tags=ci -shuffle=on ./...
 
 .PHONY: test-all
 test-all: ## Execute all tests including integration tests

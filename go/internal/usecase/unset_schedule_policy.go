@@ -6,16 +6,18 @@ import (
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
 
 // UnsetSchedulePolicyUseCase handles the business logic for removing a schedule policy
 type UnsetSchedulePolicyUseCase struct {
 	vmRepo repository.VMRepository
+	logger log.Logger
 }
 
 // NewUnsetSchedulePolicyUseCase creates a new instance of UnsetSchedulePolicyUseCase
-func NewUnsetSchedulePolicyUseCase(vmRepo repository.VMRepository) *UnsetSchedulePolicyUseCase {
-	return &UnsetSchedulePolicyUseCase{vmRepo: vmRepo}
+func NewUnsetSchedulePolicyUseCase(vmRepo repository.VMRepository, logger log.Logger) *UnsetSchedulePolicyUseCase {
+	return &UnsetSchedulePolicyUseCase{vmRepo: vmRepo, logger: logger}
 }
 
 // Execute removes a schedule policy from a VM.
@@ -64,5 +66,6 @@ func (uc *UnsetSchedulePolicyUseCase) Execute(ctx context.Context, project, zone
 		return fmt.Errorf("failed to unset schedule policy: %w", unsetErr)
 	}
 
+	uc.logger.Infof("✓ Successfully unset schedule policy %s for VM %s", policyName, foundVM.Name)
 	return nil
 }
