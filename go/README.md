@@ -32,11 +32,15 @@ gcectl list
 # Describe a specific VM (detailed information)
 gcectl describe <vm_name>
 
-# Start a VM
-gcectl on <vm_name>
+# Start one or more VMs
+gcectl on <vm_name> [<vm_name> ...]
+# Example: gcectl on vm1
+# Example: gcectl on vm1 vm2 vm3
 
-# Stop a VM
-gcectl off <vm_name>
+# Stop one or more VMs
+gcectl off <vm_name> [<vm_name> ...]
+# Example: gcectl off vm1
+# Example: gcectl off vm1 vm2 vm3
 ```
 
 ### Advanced Commands
@@ -85,9 +89,20 @@ gcectl set schedule <vm_name> <policy_name> --un
 **Operation with Progress:**
 
 ```
+# Start a single VM
 $ gcectl on my-vm
 Starting VM my-vm...
 [SUCCESS] | VM my-vm started successfully
+
+# Start multiple VMs in parallel
+$ gcectl on vm1 vm2 vm3
+Starting 3 VMs...
+[SUCCESS] | All VMs started successfully
+
+# Stop multiple VMs in parallel
+$ gcectl off vm1 vm2
+Stopping 2 VMs...
+[SUCCESS] | All VMs stopped successfully
 ```
 
 ### Global Flags
@@ -103,9 +118,9 @@ Create a `config.yaml` file in your home directory or specify a custom location 
 - `default-project`: Your default GCP project ID
 - `default-zone`: Default compute zone for operations
 - `vm`: List of VM configurations
-  - `name`: Name of the VM instance
-  - `project`: Project ID where VM resides (overrides default-project)
-  - `zone`: Zone where VM resides (overrides default-zone)
+    - `name`: Name of the VM instance
+    - `project`: Project ID where VM resides (overrides default-project)
+    - `zone`: Zone where VM resides (overrides default-zone)
 
 #### Example Configuration
 
@@ -175,43 +190,43 @@ The application is organized into distinct layers, each with specific responsibi
 **Use Case Layer - Applied Judiciously**
 
 - **Used for**: Operations with business logic (Start, Stop, UpdateMachineType)
-  - Example: `CanStart()` checks prevent starting an already running VM
-  - Example: `CanStop()` checks prevent stopping an already stopped VM
-  - Example: Machine type changes require VM to be in STOPPED state
+    - Example: `CanStart()` checks prevent starting an already running VM
+    - Example: `CanStop()` checks prevent stopping an already stopped VM
+    - Example: Machine type changes require VM to be in STOPPED state
 - **Not used for**: Simple read operations (List, Describe)
-  - These operations directly use repository without business logic
-  - Follows YAGNI (You Aren't Gonna Need It) principle
+    - These operations directly use repository without business logic
+    - Follows YAGNI (You Aren't Gonna Need It) principle
 - **Shared utilities**: Common functions like `calculateUptimeString()` are extracted
-  - Used by multiple commands to maintain consistency
-  - Reduces code duplication while maintaining clean architecture
+    - Used by multiple commands to maintain consistency
+    - Reduces code duplication while maintaining clean architecture
 
 **Repository Pattern**
 
 - Abstracts GCP API interactions behind clean interfaces
-- Enables parallel execution using `errgroup` for performance
-- Provides progress feedback through callback pattern
-- Progress callbacks decouple infrastructure from presentation layer
+- All VM operations implemented in infrastructure layer
+- Clean separation between business logic and external API calls
 
 **Presenter Pattern**
 
 - Centralizes all console output formatting
 - Separates presentation logic from business logic
 - Uses `lipgloss` for styled terminal output
-- Implements `Progress()` and `ProgressDone()` for operation feedback
+- Implements `ExecuteWithProgress()` for operation feedback with visual indicators
+- Progress control entirely in presentation layer (cmd)
 
 #### 4. **Testing Strategy**
 
 - **Domain Layer**: Unit tests for business rules (CanStart, CanStop, Uptime)
 - **Use Case Layer**: Tests with mock repositories for business logic validation
-  - Tests for shared utilities like `calculateUptimeString()`
-  - Tests for uptime formatting (`formatUptime()`)
-    - Supports days, hours, minutes, and seconds
-    - Format: `7d12h45m` (days), `2h30m` (hours), `5m30s` (minutes), `45s` (seconds)
-  - Tests for describe and list operations
+    - Tests for shared utilities like `calculateUptimeString()`
+    - Tests for uptime formatting (`formatUptime()`)
+        - Supports days, hours, minutes, and seconds
+        - Format: `7d12h45m` (days), `2h30m` (hours), `5m30s` (minutes), `45s` (seconds)
+    - Tests for describe and list operations
 - **Infrastructure Layer**: Integration tests for configuration parsing
 - **Presenter Layer**: Output validation tests
-  - Progress indicator tests (`Progress()`, `ProgressDone()`, `ProgressStart()`)
-  - Status emoji rendering tests
+    - Progress indicator tests (`Progress()`, `ProgressDone()`, `ProgressStart()`)
+    - Status emoji rendering tests
 - All tests use table-driven test pattern for clarity and maintainability
 - 80+ test cases with race detection enabled
 
@@ -283,9 +298,9 @@ go/
 
 - **Purpose**: Core business logic and rules
 - **Contains**:
-  - VM entity with status management
-  - Business rules: `CanStart()`, `CanStop()`, `Uptime()`
-  - Repository interfaces (contracts)
+    - VM entity with status management
+    - Business rules: `CanStart()`, `CanStop()`, `Uptime()`
+    - Repository interfaces (contracts)
 - **Dependencies**: None (pure domain logic)
 - **Tests**: Unit tests for all business rules
 
@@ -293,46 +308,52 @@ go/
 
 - **Purpose**: Orchestrate business operations
 - **Contains**:
-  - Application-specific business logic
-  - Coordination between domain and infrastructure
+    - Application-specific business logic
+    - Coordination between domain and infrastructure
+    - Parallel execution for multiple VMs using `errgroup`
 - **When to use**:
-  - Operations requiring business rule validation
-  - Multi-step operations with domain logic
+    - Operations requiring business rule validation
+    - Multi-step operations with domain logic
+    - Operations on multiple VMs requiring parallelization
 - **When NOT to use**:
-  - Simple CRUD operations without business logic
-  - Direct data retrieval without validation
+    - Simple CRUD operations without business logic
+    - Direct data retrieval without validation
 - **Dependencies**: Domain layer only
+- **Key Features**:
+    - Start/Stop operations support multiple VMs in parallel
+    - Fail-fast behavior: if one VM operation fails, all operations are cancelled
+    - Success logging for each VM operation
 - **Tests**: Mock-based tests with table-driven patterns
 
 #### Infrastructure Layer (`internal/infrastructure/`)
 
 - **Purpose**: External system integrations
 - **Contains**:
-  - GCP Compute Engine API client
-  - Configuration file parsing (YAML)
-  - Logger implementation
+    - GCP Compute Engine API client
+    - Configuration file parsing (YAML)
+    - Logger implementation
 - **Dependencies**: Domain layer (implements repository interfaces)
 - **Key Features**:
-  - Parallel execution with `errgroup`
-  - Progress indicators with callback pattern
-  - `ProgressCallback` type for clean layer separation
-  - `SetProgressCallback()` for injecting presentation logic
-  - Error handling and retry logic
+    - Error handling and retry logic
+    - VM repository implementation for GCP API
+- **Tests**: Integration tests for real GCP operations (with `//go:build integration` tag)
 
 #### Interface Layer (`cmd/`, `internal/interface/`)
 
 - **Purpose**: User interaction and presentation
 - **Contains**:
-  - CLI commands (Cobra framework)
-  - Console output formatting (lipgloss)
-  - VM list and detail rendering
-  - Progress indicators
+    - CLI commands (Cobra framework)
+    - Console output formatting (lipgloss)
+    - VM list and detail rendering
+    - Progress indicators
 - **Dependencies**: All inner layers
 - **Key Features**:
-  - Styled terminal output (tables, lists)
-  - Status emojis (🟢 RUNNING, 🔴 STOPPED, etc.)
-  - Uptime display for running VMs
-  - Progress feedback (`Progress()`, `ProgressDone()`)
+    - Styled terminal output (tables, lists)
+    - Status emojis (🟢 RUNNING, 🔴 STOPPED, etc.)
+    - Uptime display for running VMs
+    - Progress feedback with `ExecuteWithProgress()` helper
+    - Multiple VMs support for on/off commands
+    - Parallel execution with visual progress indicators
 
 ### Common Issues
 
@@ -390,26 +411,25 @@ make lint
 
 ### Completed Features ✅
 
-- ✅ Start VM (`on` command)
-- ✅ Stop VM (`off` command)
+- ✅ Start VM (`on` command) - supports multiple VMs in parallel
+- ✅ Stop VM (`off` command) - supports multiple VMs in parallel
 - ✅ Describe VM (`describe` command)
 - ✅ List VMs (`list` command)
 - ✅ Set machine type (`set machine-type` command)
 - ✅ Set/unset schedule policy (`set schedule` command)
 - ✅ Clean Architecture implementation
-- ✅ Comprehensive test coverage (68+ test cases)
+- ✅ Comprehensive test coverage (80+ test cases)
 - ✅ Progress indicators during operations
-- ✅ Parallel execution for list operations
+- ✅ Parallel execution for multiple VMs
 - ✅ Styled console output with lipgloss
 - ✅ Uptime display for running VMs
-- ✅ Callback pattern for progress feedback
+- ✅ Integration tests for GCP operations
 
 ### Planned Features 🔜
 
 - [ ] Interactive TUI mode with bubbletea
 - [ ] List available machine types
 - [ ] VM cost estimation
-- [ ] Batch operations (start/stop multiple VMs)
 - [ ] Configuration validation command
 - [ ] Export VM details to JSON/YAML
 - [ ] GoReleaser integration for releases
@@ -418,15 +438,14 @@ make lint
 
 Commands
 
-- [x] on
-- [x] off
+- [x] on (supports multiple VMs)
+- [x] off (supports multiple VMs)
 - [x] describe  
 - [x] list
 - [x] set-machine-type
 - [x] set-schedule
 - [ ] list machine-type
 - [ ] cost estimation
-- [ ] batch operations
 
 Architecture
 
@@ -434,8 +453,9 @@ Architecture
 - [x] Domain layer with business rules
 - [x] Use case layer (applied judiciously)
 - [x] Repository pattern
-- [x] Presenter pattern
-- [x] Comprehensive tests
+- [x] Presenter pattern with ExecuteWithProgress
+- [x] Comprehensive tests (unit + integration)
+- [x] Parallel execution with errgroup
 
 Output Format
 
