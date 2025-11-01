@@ -88,13 +88,11 @@ mkdir -p "$INSTALL_DIR"
 # install コマンド (または mv) を使ってパスが通った場所に配置
 # sudoが必要な場合がある
 if [ -w "$INSTALL_DIR" ]; then
-  mv "${TEMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+  install -m 755 "${TEMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/"
 else
   echo "管理者権限 (sudo) が必要です: ${INSTALL_DIR} に ${BINARY_NAME} を移動します"
-  sudo mv "${TEMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+  sudo install -m 755 "${TEMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/"
 fi
-
-chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 rm -rf "$TEMP_DIR" # 一時ファイルを削除
 
 echo ""
