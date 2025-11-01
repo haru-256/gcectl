@@ -4,6 +4,9 @@ project_name: gcectl
 
 git:
   tag_sort: -version:refname
+  # タグのプレフィックスを無視する設定を追加
+  ignore_tags:
+    - ""
 
 before:
   hooks:

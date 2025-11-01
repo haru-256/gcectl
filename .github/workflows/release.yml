@@ -23,7 +23,14 @@ jobs:
           go-version-file: ./go/go.mod
           cache-dependency-path: ./go/go.sum
 
-      # 3. GoReleaser アクションを実行
+      # 3. タグ名から 'go-' プレフィックスを除去する
+      - name: Set clean tag name
+        id: tag_name
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          echo "tag=${TAG_NAME#go-}" >> $GITHUB_OUTPUT
+
+      # 4. GoReleaser アクションを実行
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
@@ -35,3 +42,6 @@ jobs:
         env:
           # リリースを作成・アップロードするために必要なトークン
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # tag名のプレフィックスを無視するための環境変数を設定
+          # https://goreleaser.com/cookbooks/set-a-custom-git-tag/
+          GORELEASER_CURRENT_TAG: ${{ steps.tag_name.outputs.tag }}
