@@ -45,7 +45,7 @@ echo "最新バージョンを確認中..."
 RELEASE_JSON=$(curl -s "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest")
 
 # バージョンを抽出（"v0.0.1" の形式）
-VERSION=$(echo "$RELEASE_JSON" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+VERSION=$(echo "$RELEASE_JSON" | grep -o '"tag_name": *"[^"]*"' | cut -d '"' -f 4)
 
 if [ -z "$VERSION" ]; then
   echo "エラー: 最新バージョンの取得に失敗しました。"
