@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
@@ -32,7 +33,7 @@ Example:
 func offRun(cmd *cobra.Command, args []string) {
 	console := presenter.NewConsolePresenter()
 	vmNames := args
-	infraLog.DefaultLogger.Debugf("Turning off the instances: %v", vmNames)
+	infraLog.DefaultLogger.Debugf("Turning off the instances %s", strings.Join(vmNames, ", "))
 
 	// parse config
 	cnf, err := config.ParseConfig(CnfPath)
@@ -61,26 +62,17 @@ func offRun(cmd *cobra.Command, args []string) {
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	var message string
-	if len(vms) == 1 {
-		message = fmt.Sprintf("Stopping VM %s", vms[0].Name)
-	} else {
-		message = fmt.Sprintf("Stopping %d VMs", len(vms))
-	}
-
-	err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
-		return stopVMUseCase.Execute(ctx, vms)
-	})
+	err = console.ExecuteWithProgress(ctx,
+		fmt.Sprintf("Starting VMs %s", strings.Join(vmNames, ", ")),
+		func(ctx context.Context) error {
+			return stopVMUseCase.Execute(ctx, vms)
+		})
 	if err != nil {
 		console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v\n", err))
 		os.Exit(1)
 	}
 
-	if len(vms) == 1 {
-		console.Success(fmt.Sprintf("Turned off the instance: %v\n", vms[0].Name))
-	} else {
-		console.Success(fmt.Sprintf("Turned off %d instances\n", len(vms)))
-	}
+	console.Success(fmt.Sprintf("Turned on the instances: %v\n", strings.Join(vmNames, ", ")))
 }
 
 func init() {

@@ -32,11 +32,7 @@ Example:
 func onRun(cmd *cobra.Command, args []string) {
 	console := presenter.NewConsolePresenter()
 	vmNames := args
-	infraLog.DefaultLogger.Debugf("Turning on the instances %v", vmNames)
-	if len(vmNames) == 0 {
-		console.Error("VM name is required")
-		os.Exit(1)
-	}
+	infraLog.DefaultLogger.Debugf("Turning on the instances %s", strings.Join(vmNames, ", "))
 
 	// parse config
 	cnf, err := config.ParseConfig(CnfPath)
