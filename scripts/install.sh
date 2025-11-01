@@ -115,7 +115,7 @@ if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
 fi
 
 echo "バージョン確認:"
-if command -v ${BINARY_NAME} >/dev/null 2>&1; then
+if command -v "${BINARY_NAME}" >/dev/null 2>&1; then
   ${BINARY_NAME} --version
 else
   ${INSTALL_DIR}/${BINARY_NAME} --version
