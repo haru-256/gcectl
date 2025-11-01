@@ -23,14 +23,17 @@ A powerful and elegant CLI tool for managing Google Cloud Compute Engine instanc
 
 ## 📦 Installation
 
-### Prerequisites
+### From Binary Release
 
-- Go 1.21 or higher
-- Google Cloud SDK configured
-- Active GCP project with Compute Engine API enabled
-- Appropriate IAM permissions for GCE management
+```sh
+curl -sSL "https://raw.githubusercontent.com/haru-256/gcectl/main/install.sh" | sh
+```
 
 ### From Source
+
+Prerequisites
+
+- Go 1.21 or higher
 
 ```bash
 git clone https://github.com/haru-256/gcectl.git
