@@ -34,7 +34,19 @@ import (
 var (
 	// CnfPath is the path to the configuration file
 	CnfPath string
+	// Package-level variables to store values passed from main.
+	appVersion string
+	appCommit  string
+	appDate    string
 )
+
+// SetVersionInfo is called from main.go to set the version information.
+// It's an exported function so that its variables can be overwritten by GoReleaser's ldflags.
+func SetVersionInfo(version, commit, date string) {
+	appVersion = version
+	appCommit = commit
+	appDate = date
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -53,6 +65,8 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	// mainでSetVersionInfoが呼び出されてから実行
+	rootCmd.Version = appVersion
 	err := rootCmd.Execute()
 	if err != nil {
 		infraLog.DefaultLogger.Fatalf("failed to execute command: %v", err)

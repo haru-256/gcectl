@@ -23,6 +23,13 @@ package main
 
 import "github.com/haru-256/gcectl/cmd"
 
+var (
+	version = "dev"  // this will be overwritten by ldflags
+	commit  = "none" // this will be overwritten by ldflags
+	date    = "none" // this will be overwritten by ldflags
+)
+
 func main() {
+	cmd.SetVersionInfo(version, commit, date)
 	cmd.Execute()
 }
