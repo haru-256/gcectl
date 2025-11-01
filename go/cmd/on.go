@@ -19,7 +19,7 @@ import (
 
 // onCmd represents the on command
 var onCmd = &cobra.Command{
-	Use:   "on [vm_name...]",
+Use:   "on <vm_name...>"
 	Short: "Turn on the instances",
 	Long: `Turn on the instances
 
