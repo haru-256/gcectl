@@ -18,9 +18,9 @@ variable "machine_type" {
   description = "The machine type for your GCP project"
 }
 
-variable "vm_name" {
-  type        = string
-  description = "The name of the VM"
+variable "vm_names" {
+  type        = list(string)
+  description = "The list of VM names"
 }
 
 variable "with_stop_schedule" {

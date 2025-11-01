@@ -1,13 +1,16 @@
 package presenter
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/list"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -310,4 +313,63 @@ func getItemPaddings(listItemsHeader []string) []string {
 		}
 	}
 	return paddingsStr
+}
+
+// ExecuteWithProgress executes a function with progress indication.
+//
+// This function displays a progress message, executes the provided function
+// in a goroutine, and shows progress dots every second until completion.
+// It properly handles context cancellation and ensures clean shutdown.
+//
+// Parameters:
+//   - ctx: Context for cancellation control
+//   - message: Initial progress message (e.g., "Starting VMs")
+//   - fn: The function to execute (receives context and returns error)
+//
+// Returns:
+//   - error: Error from the executed function, or nil on success
+//
+// Example:
+//
+//	err := console.ExecuteWithProgress(
+//	    ctx,
+//	    "Starting VMs vm-1, vm-2",
+//	    func(ctx context.Context) error {
+//	        return startVMUseCase.Execute(ctx, vms)
+//	    },
+//	)
+func (p *ConsolePresenter) ExecuteWithProgress(ctx context.Context, message string, fn func(context.Context) error) error {
+	p.ProgressStart(message)
+	defer p.ProgressDone()
+
+	eg, ctx := errgroup.WithContext(ctx)
+	doneCh := make(chan struct{})
+
+	// Execute the function
+	eg.Go(func() error {
+		defer close(doneCh)
+		if err := fn(ctx); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	// Display progress dots every second
+	eg.Go(func() error {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-doneCh:
+				return nil
+			case <-ticker.C:
+				p.Progress()
+			}
+		}
+	})
+
+	return eg.Wait()
 }

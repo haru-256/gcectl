@@ -2,28 +2,18 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
-module "project_services" {
-  source  = "terraform-google-modules/project-factory/google//modules/project_services"
-  version = "~> 18.0"
-
-  project_id = var.project_id
-  activate_apis = [
-    "compute.googleapis.com",
-  ]
-}
-
 # VPC Network
 resource "google_compute_network" "vpc_network" {
   name                    = "sandbox"
   auto_create_subnetworks = false
-  project                 = module.project_services.project_id
+  project                 = var.project_id
 }
 
 # Subnetwork
 resource "google_compute_subnetwork" "subnet" {
   name                     = "sandbox"
   ip_cidr_range            = "10.0.0.0/24"
-  project                  = module.project_services.project_id
+  project                  = var.project_id
   region                   = var.region
   network                  = google_compute_network.vpc_network.name
   private_ip_google_access = true # Enable private Google access for Cloud NAT
@@ -32,7 +22,7 @@ resource "google_compute_subnetwork" "subnet" {
 # # Cloud Router
 # resource "google_compute_router" "nat_router" {
 #   name    = "nat-router"
-#   project                 = module.project_services.project_id
+#   project                 = var.project_id
 #   region  = var.region
 #   network = google_compute_network.vpc_network.name
 # }
@@ -41,7 +31,7 @@ resource "google_compute_subnetwork" "subnet" {
 # resource "google_compute_router_nat" "cloud_nat" {
 #   name                               = "cloud-nat"
 #   router                             = google_compute_router.nat_router.name
-#   project                 = module.project_services.project_id
+#   project                 = var.project_id
 #   region                             = var.region
 #   nat_ip_allocate_option             = "AUTO_ONLY" # Automatically allocate external IPs for NAT
 #   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
@@ -50,7 +40,7 @@ resource "google_compute_subnetwork" "subnet" {
 # # Firewall Rule for SSH (Optional)
 # resource "google_compute_firewall" "iap_ssh_firewall" {
 #   name      = "allow-ssh-from-iap"
-#   project                 = module.project_services.project_id
+#   project                 = var.project_id
 #   network   = google_compute_network.vpc_network.name
 #   direction = "INGRESS"
 
@@ -67,7 +57,7 @@ resource "google_compute_resource_policy" "stop_schedule" {
   count = var.with_stop_schedule ? 1 : 0
 
   name    = "stop"
-  project = module.project_services.project_id
+  project = var.project_id
   region  = var.region
   instance_schedule_policy {
     vm_stop_schedule {
@@ -79,16 +69,18 @@ resource "google_compute_resource_policy" "stop_schedule" {
 
 # add iam to the service account for scheduling
 resource "google_project_iam_member" "compute_service_agent" {
-  project = module.project_services.project_id # Replace with your actual project ID
+  project = var.project_id # Replace with your actual project ID
   role    = "roles/compute.instanceAdmin.v1"
   member  = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
 }
 
 # Compute Instance (VM)
-resource "google_compute_instance" "vm_instance" {
-  name         = var.vm_name
+resource "google_compute_instance" "vm_instances" {
+  for_each = toset(var.vm_names)
+
+  name         = each.value
   machine_type = "f1-micro"
-  project      = google_project_iam_member.compute_service_agent.project
+  project      = var.project_id
   zone         = var.zone
 
   boot_disk {

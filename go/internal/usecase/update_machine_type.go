@@ -4,17 +4,20 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
 
 // UpdateMachineTypeUseCase handles the business logic for updating VM machine type
 type UpdateMachineTypeUseCase struct {
 	vmRepo repository.VMRepository
+	logger log.Logger
 }
 
 // NewUpdateMachineTypeUseCase creates a new instance of UpdateMachineTypeUseCase
-func NewUpdateMachineTypeUseCase(vmRepo repository.VMRepository) *UpdateMachineTypeUseCase {
-	return &UpdateMachineTypeUseCase{vmRepo: vmRepo}
+func NewUpdateMachineTypeUseCase(vmRepo repository.VMRepository, logger log.Logger) *UpdateMachineTypeUseCase {
+	return &UpdateMachineTypeUseCase{vmRepo: vmRepo, logger: logger}
 }
 
 // Execute updates the machine type of a VM after validating it is in a stopped state.
@@ -48,20 +51,26 @@ func NewUpdateMachineTypeUseCase(vmRepo repository.VMRepository) *UpdateMachineT
 //	}
 func (uc *UpdateMachineTypeUseCase) Execute(ctx context.Context, project, zone, name, machineType string) error {
 	// 1. VMを取得
-	vm, err := uc.vmRepo.FindByName(ctx, project, zone, name)
+	vm := &model.VM{
+		Project: project,
+		Zone:    zone,
+		Name:    name,
+	}
+	foundVM, err := uc.vmRepo.FindByName(ctx, vm)
 	if err != nil {
 		return fmt.Errorf("failed to find VM: %w", err)
 	}
 
 	// 2. ビジネスルールチェック（VMは停止状態である必要がある）
-	if vm.CanStop() {
-		return fmt.Errorf("VM %s must be stopped before changing machine type (current status: %s)", vm.Name, vm.Status)
+	if foundVM.CanStop() {
+		return fmt.Errorf("VM %s must be stopped before changing machine type (current status: %s)", foundVM.Name, foundVM.Status)
 	}
 
 	// 3. マシンタイプ更新実行
-	if updateErr := uc.vmRepo.UpdateMachineType(ctx, vm, machineType); updateErr != nil {
+	if updateErr := uc.vmRepo.UpdateMachineType(ctx, foundVM, machineType); updateErr != nil {
 		return fmt.Errorf("failed to update machine type: %w", updateErr)
 	}
 
+	uc.logger.Infof("✓ Successfully updated machine type to %s for VM %s", machineType, foundVM.Name)
 	return nil
 }

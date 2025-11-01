@@ -1,14 +1,14 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
+	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
@@ -19,56 +19,60 @@ import (
 
 // offCmd represents the off command
 var offCmd = &cobra.Command{
-	Use:   "off <vm_name>",
-	Short: "Turn off the instance",
-	Long: `Turn off the instance
+	Use:   "off <vm_name>...",
+	Short: "Turn off one or more instances",
+	Long: `Turn off one or more instances
 
 Example:
-  gcectl off <vm_name>`,
-	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		console := presenter.NewConsolePresenter()
-		vmName := args[0]
-		infraLog.DefaultLogger.Debugf("Turning off the instance %s", vmName)
-		if vmName == "" {
-			infraLog.DefaultLogger.Error("VM name is required")
-			os.Exit(1)
-		}
+  gcectl off <vm_name>
+  gcectl off <vm_name1> <vm_name2> <vm_name3>`,
+	Args: cobra.MinimumNArgs(1),
+	Run:  offRun,
+}
 
-		// parse config
-		cnf, err := config.ParseConfig(CnfPath)
-		if err != nil {
-			console.Error(fmt.Sprintf("Failed to parse config: %v\n", err))
-			os.Exit(1)
-		}
-		infraLog.DefaultLogger.Debug(fmt.Sprintf("Config: %+v", cnf))
+func offRun(cmd *cobra.Command, args []string) {
+	console := presenter.NewConsolePresenter()
+	vmNames := args
+	infraLog.DefaultLogger.Debugf("Turning off the instances %s", strings.Join(vmNames, ", "))
 
-		// filter VM by name
+	// parse config
+	cnf, err := config.ParseConfig(CnfPath)
+	if err != nil {
+		console.Error(fmt.Sprintf("Failed to parse config: %v\n", err))
+		os.Exit(1)
+	}
+	infraLog.DefaultLogger.Debug(fmt.Sprintf("Config: %+v", cnf))
+
+	// domain entity変換
+	var vms []*model.VM
+	for _, vmName := range vmNames {
 		vm := cnf.GetVMByName(vmName)
 		if vm == nil {
 			console.Error(fmt.Sprintf("VM %s not found", vmName))
 			os.Exit(1)
 		}
+		vms = append(vms, vm)
+	}
 
-		// 依存性の注入
-		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
-		// Set progress callback to display dots during operation
-		vmRepo.SetProgressCallback(console.Progress)
-		stopVMUseCase := usecase.NewStopVMUseCase(vmRepo)
+	// 依存性の注入
+	vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
+	stopVMUseCase := usecase.NewStopVMUseCase(vmRepo, infraLog.DefaultLogger)
 
-		// Turn off the instance
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
+	// Turn off the instances
+	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-		console.ProgressStart(fmt.Sprintf("Stopping VM %s", vmName))
-		if err = stopVMUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name); err != nil {
-			console.ProgressDone()
-			console.Error(fmt.Sprintf("Failed to turn off the instance: %v\n", err))
-			os.Exit(1)
-		}
-		console.ProgressDone()
-		console.Success(fmt.Sprintf("Turned off the instance: %v\n", vmName))
-	},
+	err = console.ExecuteWithProgress(ctx,
+		fmt.Sprintf("Stopping VMs %s", strings.Join(vmNames, ", ")),
+		func(ctx context.Context) error {
+			return stopVMUseCase.Execute(ctx, vms)
+		})
+	if err != nil {
+		console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v\n", err))
+		os.Exit(1)
+	}
+
+	console.Success(fmt.Sprintf("Turned on the instances: %v\n", strings.Join(vmNames, ", ")))
 }
 
 func init() {

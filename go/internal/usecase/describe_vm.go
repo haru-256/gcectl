@@ -35,13 +35,18 @@ import (
 //	// vm: &model.VM{Name: "my-vm", Status: model.StatusRunning, ...}
 //	// uptime: "2h30m15s"
 func DescribeVM(ctx context.Context, repo repository.VMRepository, project, zone, name string) (*model.VM, string, error) {
-	vm, err := repo.FindByName(ctx, project, zone, name)
+	vm := &model.VM{
+		Project: project,
+		Zone:    zone,
+		Name:    name,
+	}
+	foundVM, err := repo.FindByName(ctx, vm)
 	if err != nil {
 		return nil, "", err
 	}
 
 	// Calculate uptime using shared logic
-	uptimeStr := calculateUptimeString(vm, time.Now())
+	uptimeStr := calculateUptimeString(foundVM, time.Now())
 
-	return vm, uptimeStr, nil
+	return foundVM, uptimeStr, nil
 }

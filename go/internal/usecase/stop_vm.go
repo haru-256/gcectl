@@ -4,63 +4,61 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
+	"golang.org/x/sync/errgroup"
 )
 
 // StopVMUseCase handles the business logic for stopping a VM
 type StopVMUseCase struct {
 	vmRepo repository.VMRepository
+	logger log.Logger
 }
 
 // NewStopVMUseCase creates a new instance of StopVMUseCase
-func NewStopVMUseCase(vmRepo repository.VMRepository) *StopVMUseCase {
-	return &StopVMUseCase{vmRepo: vmRepo}
+func NewStopVMUseCase(vmRepo repository.VMRepository, logger log.Logger) *StopVMUseCase {
+	return &StopVMUseCase{vmRepo: vmRepo, logger: logger}
 }
 
-// Execute stops a VM instance after validating it can be stopped.
-//
-// This method performs the following steps:
-// 1. Retrieves the VM instance from the repository
-// 2. Validates that the VM can be stopped (business rule check via CanStop)
-// 3. Executes the stop operation
+// Execute stops multiple VM instances in parallel after validating each can be stopped.
 //
 // Parameters:
-//   - ctx: The context for the operation (used for cancellation and timeout)
-//   - project: The GCP project ID
-//   - zone: The GCP zone
-//   - name: The VM instance name
+//   - ctx: The context for the operation
+//   - vms: The VM instances to stop
 //
 // Returns:
 //   - error: nil on success, otherwise an error describing what went wrong
-//
-// Error conditions:
-//   - VM not found: when the VM does not exist in the specified project/zone
-//   - VM cannot be stopped: when the VM is not in a stoppable state (e.g., already TERMINATED)
-//   - Stop operation failed: when the GCP API call to stop the VM fails
-//
-// Example:
-//
-//	usecase := NewStopVMUseCase(vmRepo)
-//	err := usecase.Execute(ctx, "my-project", "us-central1-a", "my-vm")
-//	if err != nil {
-//	    log.Fatalf("Failed to stop VM: %v", err)
-//	}
-func (uc *StopVMUseCase) Execute(ctx context.Context, project, zone, name string) error {
-	// 1. VMを取得
-	vm, err := uc.vmRepo.FindByName(ctx, project, zone, name)
-	if err != nil {
-		return fmt.Errorf("failed to find VM: %w", err)
+func (uc *StopVMUseCase) Execute(ctx context.Context, vms []*model.VM) error {
+	eg, ctx := errgroup.WithContext(ctx)
+
+	for _, vm := range vms {
+		vm := vm
+		eg.Go(func() error {
+			// 1. VMを取得して存在確認
+			foundVM, err := uc.vmRepo.FindByName(ctx, vm)
+			if err != nil {
+				return fmt.Errorf("VM %s: failed to find: %w", vm.Name, err)
+			}
+
+			if foundVM == nil {
+				return fmt.Errorf("VM %s: not found", vm.Name)
+			}
+
+			// 2. ビジネスルールチェック
+			if !foundVM.CanStop() {
+				return fmt.Errorf("VM %s: cannot be stopped (current status: %s)", foundVM.Name, foundVM.Status)
+			}
+
+			// 3. 停止実行
+			if stopErr := uc.vmRepo.Stop(ctx, foundVM); stopErr != nil {
+				return fmt.Errorf("VM %s: failed to stop: %w", foundVM.Name, stopErr)
+			}
+
+			uc.logger.Infof("✓ Successfully stopped VM %s", foundVM.Name)
+			return nil
+		})
 	}
 
-	// 2. ビジネスルールチェック
-	if !vm.CanStop() {
-		return fmt.Errorf("VM %s cannot be stopped (current status: %s)", vm.Name, vm.Status)
-	}
-
-	// 3. 停止実行
-	if stopErr := uc.vmRepo.Stop(ctx, vm); stopErr != nil {
-		return fmt.Errorf("failed to stop VM: %w", stopErr)
-	}
-
-	return nil
+	return eg.Wait()
 }

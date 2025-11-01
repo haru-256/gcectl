@@ -7,9 +7,11 @@ import (
 )
 
 // VMRepository defines the interface for VM data access
+//
+//go:generate go tool mockgen -source=$GOFILE -destination=../../mock/repository/vm_repository_mock.go -package=mock_repository
 type VMRepository interface {
 	// FindByName retrieves a VM by its name, project, and zone
-	FindByName(ctx context.Context, project, zone, name string) (*model.VM, error)
+	FindByName(ctx context.Context, vm *model.VM) (*model.VM, error)
 
 	// FindAll retrieves all VMs from the configuration
 	FindAll(ctx context.Context) ([]*model.VM, error)

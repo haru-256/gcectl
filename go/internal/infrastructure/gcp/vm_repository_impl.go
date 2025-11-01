@@ -12,34 +12,17 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/haru-256/gcectl/internal/domain/repository"
 	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
-
-// ProgressCallback is a function type for reporting operation progress.
-//
-// This callback is invoked periodically (approximately once per second) while waiting
-// for long-running GCP operations to complete. It allows the presentation layer to
-// display progress indicators (e.g., dots, spinner) without coupling the infrastructure
-// layer to specific output mechanisms.
-//
-// The callback takes no parameters and returns no values. It should be a lightweight
-// operation, typically just printing a character or updating a progress indicator.
-//
-// Example:
-//
-//	repo.SetProgressCallback(func() {
-//	    fmt.Print(".")
-//	})
-type ProgressCallback func()
 
 // VMRepository implements the repository.VMRepository interface for GCP.
 //
 //nolint:govet // Field order optimized for readability over memory alignment
 type VMRepository struct {
-	configPath       string
-	logger           log.Logger
-	progressCallback ProgressCallback // Optional callback for operation progress
+	configPath string
+	logger     log.Logger
 }
 
 // NewVMRepository creates a new VMRepository instance.
@@ -57,26 +40,7 @@ func NewVMRepository(configPath string, logger log.Logger) *VMRepository {
 	}
 }
 
-// SetProgressCallback sets a callback function to be called during operation progress.
-//
-// This method allows the presentation layer to display progress (e.g., dots) during
-// long-running GCP operations without violating Clean Architecture principles.
-// The callback will be invoked approximately once per second while waiting for
-// operations to complete.
-//
-// Parameters:
-//   - callback: Function to call periodically during operations
-//
-// Example:
-//
-//	repo := gcp.NewVMRepository(configPath, logger)
-//	repo.SetProgressCallback(console.Progress)
-//	repo.Start(ctx, vm) // Will call console.Progress() periodically
-func (r *VMRepository) SetProgressCallback(callback ProgressCallback) {
-	r.progressCallback = callback
-}
-
-func (r *VMRepository) FindByName(ctx context.Context, project, zone, name string) (*model.VM, error) {
+func (r *VMRepository) FindByName(ctx context.Context, vm *model.VM) (*model.VM, error) {
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
@@ -88,9 +52,9 @@ func (r *VMRepository) FindByName(ctx context.Context, project, zone, name strin
 	}()
 
 	req := &computepb.GetInstanceRequest{
-		Project:  project,
-		Zone:     zone,
-		Instance: name,
+		Project:  vm.Project,
+		Zone:     vm.Zone,
+		Instance: vm.Name,
 	}
 
 	instance, err := client.Get(ctx, req)
@@ -115,7 +79,7 @@ func (r *VMRepository) FindAll(ctx context.Context) ([]*model.VM, error) {
 	for _, cfgVM := range cfg.VMs {
 		cfgVM := cfgVM // ループ変数のキャプチャ
 		eg.Go(func() error {
-			vm, findErr := r.FindByName(ctx, cfgVM.Project, cfgVM.Zone, cfgVM.Name)
+			vm, findErr := r.FindByName(ctx, cfgVM)
 			if findErr != nil {
 				// エラーをログに記録して続行
 				r.logger.Errorf("failed to find VM %s in project %s zone %s: %v", cfgVM.Name, cfgVM.Project, cfgVM.Zone, findErr)
@@ -523,38 +487,41 @@ func (r *VMRepository) waitOperator(ctx context.Context, op *compute.Operation) 
 	if op == nil {
 		return fmt.Errorf("operation is nil")
 	}
-	eg, ctx := errgroup.WithContext(ctx)
-	done := make(chan struct{})
-	eg.Go(func() error {
-		// Wait for the operation to complete
-		if err := op.Wait(ctx); err != nil {
-			return err
-		}
-		close(done)
-		return nil
-	})
+	return op.Wait(ctx)
+	// eg, ctx := errgroup.WithContext(ctx)
+	// done := make(chan struct{})
+	// eg.Go(func() error {
+	// 	// Wait for the operation to complete
+	// 	if err := op.Wait(ctx); err != nil {
+	// 		return err
+	// 	}
+	// 	close(done)
+	// 	return nil
+	// })
 
-	// Only start progress reporting if callback is set
-	if r.progressCallback != nil {
-		eg.Go(func() error {
-			ticker := time.NewTicker(1 * time.Second)
-			defer ticker.Stop()
+	// // Only start progress reporting if callback is set
+	// if r.progressCallback != nil {
+	// 	eg.Go(func() error {
+	// 		ticker := time.NewTicker(1 * time.Second)
+	// 		defer ticker.Stop()
 
-			for {
-				select {
-				case <-ctx.Done(): // Context canceled, exit the goroutine
-					return ctx.Err()
-				case <-done: // Operation is done, exit the goroutine
-					return nil
-				case <-ticker.C: // One second has passed
-					r.progressCallback()
-				}
-			}
-		})
-	}
+	// 		for {
+	// 			select {
+	// 			case <-ctx.Done(): // Context canceled, exit the goroutine
+	// 				return ctx.Err()
+	// 			case <-done: // Operation is done, exit the goroutine
+	// 				return nil
+	// 			case <-ticker.C: // One second has passed
+	// 				r.progressCallback()
+	// 			}
+	// 		}
+	// 	})
+	// }
 
-	if err := eg.Wait(); err != nil {
-		return fmt.Errorf("failed to wait for operation: %v", err)
-	}
-	return nil
+	// if err := eg.Wait(); err != nil {
+	// 	return fmt.Errorf("failed to wait for operation: %v", err)
+	// }
+	// return nil
 }
+
+var _ repository.VMRepository = (*VMRepository)(nil)

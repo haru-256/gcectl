@@ -3,6 +3,9 @@
 
 version: "2"
 
+run:
+  tests: true
+
 linters:
   default: none
   enable:
@@ -25,6 +28,14 @@ linters:
       min-complexity: 30
     misspell:
       locale: US
+
+  exclusions:
+    rules:
+      # テストファイルにだけ適用する除外規則
+      - path: _test\.go$
+        linters:
+          - govet
+        text: "fieldalignment: struct with" # 警告メッセージでマッチ
 
 formatters:
   enable:

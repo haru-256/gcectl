@@ -7,68 +7,38 @@ import (
 	"time"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	mock_repository "github.com/haru-256/gcectl/internal/mock/repository"
+	"github.com/haru-256/gcectl/internal/usecase/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 var errTestDescribe = errors.New("test error")
 
-//nolint:govet // Test structs prioritize readability over field alignment
-type mockVMRepositoryForDescribe struct {
-	findByNameFunc func(ctx context.Context, project, zone, name string) (*model.VM, error)
-}
-
-func (m *mockVMRepositoryForDescribe) FindByName(ctx context.Context, project, zone, name string) (*model.VM, error) {
-	return m.findByNameFunc(ctx, project, zone, name)
-}
-
-func (m *mockVMRepositoryForDescribe) List(ctx context.Context, project, zone string) ([]*model.VM, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (m *mockVMRepositoryForDescribe) FindAll(ctx context.Context) ([]*model.VM, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (m *mockVMRepositoryForDescribe) Start(ctx context.Context, vm *model.VM) error {
-	return errors.New("not implemented")
-}
-
-func (m *mockVMRepositoryForDescribe) Stop(ctx context.Context, vm *model.VM) error {
-	return errors.New("not implemented")
-}
-
-func (m *mockVMRepositoryForDescribe) SetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
-	return errors.New("not implemented")
-}
-
-func (m *mockVMRepositoryForDescribe) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
-	return errors.New("not implemented")
-}
-
-func (m *mockVMRepositoryForDescribe) UpdateMachineType(ctx context.Context, vm *model.VM, machineType string) error {
-	return errors.New("not implemented")
-}
-
 //nolint:gocognit // Test function is complex but readable with table-driven design
 func TestDescribeVM(t *testing.T) {
-	//nolint:govet // Test struct prioritizes readability over field alignment
 	tests := []struct {
-		name           string
-		project        string
-		zone           string
-		vmName         string
-		mockFindByName func(ctx context.Context, project, zone, name string) (*model.VM, error)
-		wantVM         *model.VM
-		wantUptime     string
-		wantErr        bool
+		name       string
+		project    string
+		zone       string
+		vmName     string
+		setupMock  func(*mock_repository.MockVMRepository)
+		wantVM     *model.VM
+		wantUptime string
+		wantErr    bool
 	}{
 		{
 			name:    "running VM with uptime",
 			project: "test-project",
 			zone:    "us-central1-a",
 			vmName:  "test-vm",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return &model.VM{
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				expectedVM := &model.VM{
+					Name:    "test-vm",
+					Project: "test-project",
+					Zone:    "us-central1-a",
+				}
+				returnVM := &model.VM{
 					Name:        "test-vm",
 					Project:     "test-project",
 					Zone:        "us-central1-a",
@@ -78,7 +48,10 @@ func TestDescribeVM(t *testing.T) {
 						t := time.Now().Add(-2 * time.Hour)
 						return &t
 					}(),
-				}, nil
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, expectedVM, returnVM, nil))
 			},
 			wantVM: &model.VM{
 				Name:        "test-vm",
@@ -95,14 +68,22 @@ func TestDescribeVM(t *testing.T) {
 			project: "test-project",
 			zone:    "us-central1-a",
 			vmName:  "stopped-vm",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return &model.VM{
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				expectedVM := &model.VM{
+					Name:    "stopped-vm",
+					Project: "test-project",
+					Zone:    "us-central1-a",
+				}
+				returnVM := &model.VM{
 					Name:        "stopped-vm",
 					Project:     "test-project",
 					Zone:        "us-central1-a",
 					MachineType: "e2-medium",
 					Status:      model.StatusStopped,
-				}, nil
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, expectedVM, returnVM, nil))
 			},
 			wantVM: &model.VM{
 				Name:        "stopped-vm",
@@ -119,8 +100,15 @@ func TestDescribeVM(t *testing.T) {
 			project: "test-project",
 			zone:    "us-central1-a",
 			vmName:  "error-vm",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return nil, errTestDescribe
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				expectedVM := &model.VM{
+					Name:    "error-vm",
+					Project: "test-project",
+					Zone:    "us-central1-a",
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, expectedVM, nil, errTestDescribe))
 			},
 			wantVM:     nil,
 			wantUptime: "",
@@ -130,11 +118,13 @@ func TestDescribeVM(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &mockVMRepositoryForDescribe{
-				findByNameFunc: tt.mockFindByName,
-			}
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-			vm, uptime, err := DescribeVM(context.Background(), repo, tt.project, tt.zone, tt.vmName)
+			mockRepo := mock_repository.NewMockVMRepository(ctrl)
+			tt.setupMock(mockRepo)
+
+			vm, uptime, err := DescribeVM(context.Background(), mockRepo, tt.project, tt.zone, tt.vmName)
 
 			if tt.wantErr {
 				assert.Error(t, err, "DescribeVM() should return an error")

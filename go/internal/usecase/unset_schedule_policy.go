@@ -4,17 +4,20 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
+	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
 
 // UnsetSchedulePolicyUseCase handles the business logic for removing a schedule policy
 type UnsetSchedulePolicyUseCase struct {
 	vmRepo repository.VMRepository
+	logger log.Logger
 }
 
 // NewUnsetSchedulePolicyUseCase creates a new instance of UnsetSchedulePolicyUseCase
-func NewUnsetSchedulePolicyUseCase(vmRepo repository.VMRepository) *UnsetSchedulePolicyUseCase {
-	return &UnsetSchedulePolicyUseCase{vmRepo: vmRepo}
+func NewUnsetSchedulePolicyUseCase(vmRepo repository.VMRepository, logger log.Logger) *UnsetSchedulePolicyUseCase {
+	return &UnsetSchedulePolicyUseCase{vmRepo: vmRepo, logger: logger}
 }
 
 // Execute removes a schedule policy from a VM.
@@ -48,15 +51,21 @@ func NewUnsetSchedulePolicyUseCase(vmRepo repository.VMRepository) *UnsetSchedul
 //	}
 func (uc *UnsetSchedulePolicyUseCase) Execute(ctx context.Context, project, zone, name, policyName string) error {
 	// 1. VMを取得
-	vm, err := uc.vmRepo.FindByName(ctx, project, zone, name)
+	vm := &model.VM{
+		Project: project,
+		Zone:    zone,
+		Name:    name,
+	}
+	foundVM, err := uc.vmRepo.FindByName(ctx, vm)
 	if err != nil {
 		return fmt.Errorf("failed to find VM: %w", err)
 	}
 
 	// 2. スケジュールポリシー削除実行
-	if unsetErr := uc.vmRepo.UnsetSchedulePolicy(ctx, vm, policyName); unsetErr != nil {
+	if unsetErr := uc.vmRepo.UnsetSchedulePolicy(ctx, foundVM, policyName); unsetErr != nil {
 		return fmt.Errorf("failed to unset schedule policy: %w", unsetErr)
 	}
 
+	uc.logger.Infof("✓ Successfully unset schedule policy %s for VM %s", policyName, foundVM.Name)
 	return nil
 }
