@@ -76,7 +76,7 @@ fi
 echo "${ARCHIVE_NAME} をダウンロードしています..."
 
 # --- 5. ダウンロードとインストール ---
-TEMP_DIR=$(mktemp -d) # 一時ディレクトリを作成
+TEMP_DIR=$(mktemp -d); trap 'rm -rf "$TEMP_DIR"' EXIT
 curl -L "$DOWNLOAD_URL" -o "${TEMP_DIR}/${ARCHIVE_NAME}"
 
 echo "インストール中..."
@@ -93,7 +93,6 @@ else
   echo "管理者権限 (sudo) が必要です: ${INSTALL_DIR} に ${BINARY_NAME} を移動します"
   sudo install -m 755 "${TEMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/"
 fi
-rm -rf "$TEMP_DIR" # 一時ファイルを削除
 
 echo ""
 echo "✅ ${BINARY_NAME} ${VERSION} のインストールが完了しました。"
