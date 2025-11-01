@@ -1,6 +1,5 @@
 name: Release Binaries
 
-# 実行トリガー: 'v' で始まるタグ (v1.0.0, v1.0.1など) がプッシュされた時
 on:
   push:
     tags:
