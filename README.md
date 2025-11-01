@@ -26,7 +26,7 @@ A powerful and elegant CLI tool for managing Google Cloud Compute Engine instanc
 ### From Binary Release
 
 ```sh
-curl -sSL "https://raw.githubusercontent.com/haru-256/gcectl/main/install.sh" | sh
+curl -sSL "https://raw.githubusercontent.com/haru-256/gcectl/main/scripts/install.sh" | sh
 ```
 
 ### From Source
