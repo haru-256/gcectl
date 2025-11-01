@@ -19,7 +19,10 @@ builds:
     # -s -w はバイナリサイズを小さくするおまじない
     # {{.Version}} などはGoReleaserがタグ名から自動で埋めてくれる変数
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}}
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
     goos:
       - linux
       - darwin
