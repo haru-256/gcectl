@@ -1,4 +1,4 @@
-output "vm_instance_id" {
-  value       = google_compute_instance.vm_instance.id
-  description = "The ID of Google Cloud Compute Engine instance"
+output "vm_instance_ids" {
+  value       = values(google_compute_instance.vm_instances)[*].id
+  description = "The IDs of Google Cloud Compute Engine instances"
 }

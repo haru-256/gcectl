@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
 )
 
@@ -48,13 +49,18 @@ func NewSetSchedulePolicyUseCase(vmRepo repository.VMRepository) *SetSchedulePol
 //	}
 func (uc *SetSchedulePolicyUseCase) Execute(ctx context.Context, project, zone, name, policyName string) error {
 	// 1. VMを取得
-	vm, err := uc.vmRepo.FindByName(ctx, project, zone, name)
+	vm := &model.VM{
+		Project: project,
+		Zone:    zone,
+		Name:    name,
+	}
+	foundVM, err := uc.vmRepo.FindByName(ctx, vm)
 	if err != nil {
 		return fmt.Errorf("failed to find VM: %w", err)
 	}
 
 	// 2. スケジュールポリシー設定実行
-	if setErr := uc.vmRepo.SetSchedulePolicy(ctx, vm, policyName); setErr != nil {
+	if setErr := uc.vmRepo.SetSchedulePolicy(ctx, foundVM, policyName); setErr != nil {
 		return fmt.Errorf("failed to set schedule policy: %w", setErr)
 	}
 

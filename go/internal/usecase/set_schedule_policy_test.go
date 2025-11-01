@@ -6,21 +6,22 @@ import (
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	mock_repository "github.com/haru-256/gcectl/internal/mock/repository"
+	"github.com/haru-256/gcectl/internal/usecase/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func TestSetSchedulePolicyUseCase_Execute(t *testing.T) {
-	//nolint:govet // field alignment is less important than readability in tests
 	tests := []struct {
-		name                  string
-		project               string
-		zone                  string
-		vmName                string
-		policyName            string
-		mockFindByName        func(ctx context.Context, project, zone, name string) (*model.VM, error)
-		mockSetSchedulePolicy func(ctx context.Context, vm *model.VM, policyName string) error
-		wantErr               bool
-		errContains           string
+		name        string
+		project     string
+		zone        string
+		vmName      string
+		policyName  string
+		errContains string
+		setupMock   func(*mock_repository.MockVMRepository)
+		wantErr     bool
 	}{
 		{
 			name:       "success: set schedule policy",
@@ -28,17 +29,24 @@ func TestSetSchedulePolicyUseCase_Execute(t *testing.T) {
 			zone:       "us-central1-a",
 			vmName:     "test-vm",
 			policyName: "my-schedule-policy",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return &model.VM{
-					Name:           name,
-					Project:        project,
-					Zone:           zone,
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				vm := &model.VM{
+					Name:           "test-vm",
+					Project:        "test-project",
+					Zone:           "us-central1-a",
 					Status:         model.StatusRunning,
 					SchedulePolicy: "",
-				}, nil
-			},
-			mockSetSchedulePolicy: func(ctx context.Context, vm *model.VM, policyName string) error {
-				return nil
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, vm, vm, nil))
+				m.EXPECT().
+					SetSchedulePolicy(gomock.Any(), vm, "my-schedule-policy").
+					DoAndReturn(func(ctx context.Context, inputVM *model.VM, policyName string) error {
+						assert.Equal(t, vm, inputVM)
+						assert.Equal(t, "my-schedule-policy", policyName)
+						return nil
+					})
 			},
 			wantErr: false,
 		},
@@ -48,12 +56,18 @@ func TestSetSchedulePolicyUseCase_Execute(t *testing.T) {
 			zone:       "us-central1-a",
 			vmName:     "nonexistent-vm",
 			policyName: "my-schedule-policy",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return nil, errors.New("VM not found")
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				expectedVM := &model.VM{
+					Name:    "nonexistent-vm",
+					Project: "test-project",
+					Zone:    "us-central1-a",
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, expectedVM, nil, errors.New("VM not found")))
 			},
-			mockSetSchedulePolicy: nil,
-			wantErr:               true,
-			errContains:           "failed to find VM",
+			wantErr:     true,
+			errContains: "failed to find VM",
 		},
 		{
 			name:       "error: set operation failed",
@@ -61,17 +75,24 @@ func TestSetSchedulePolicyUseCase_Execute(t *testing.T) {
 			zone:       "us-central1-a",
 			vmName:     "test-vm",
 			policyName: "my-schedule-policy",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return &model.VM{
-					Name:           name,
-					Project:        project,
-					Zone:           zone,
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				vm := &model.VM{
+					Name:           "test-vm",
+					Project:        "test-project",
+					Zone:           "us-central1-a",
 					Status:         model.StatusRunning,
 					SchedulePolicy: "",
-				}, nil
-			},
-			mockSetSchedulePolicy: func(ctx context.Context, vm *model.VM, policyName string) error {
-				return errors.New("GCP API error")
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, vm, vm, nil))
+				m.EXPECT().
+					SetSchedulePolicy(gomock.Any(), vm, "my-schedule-policy").
+					DoAndReturn(func(ctx context.Context, inputVM *model.VM, policyName string) error {
+						assert.Equal(t, vm, inputVM)
+						assert.Equal(t, "my-schedule-policy", policyName)
+						return errors.New("GCP API error")
+					})
 			},
 			wantErr:     true,
 			errContains: "failed to set schedule policy",
@@ -80,10 +101,11 @@ func TestSetSchedulePolicyUseCase_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := &mockVMRepository{
-				findByNameFunc:        tt.mockFindByName,
-				setSchedulePolicyFunc: tt.mockSetSchedulePolicy,
-			}
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mock_repository.NewMockVMRepository(ctrl)
+			tt.setupMock(mockRepo)
 
 			usecase := NewSetSchedulePolicyUseCase(mockRepo)
 			err := usecase.Execute(context.Background(), tt.project, tt.zone, tt.vmName, tt.policyName)

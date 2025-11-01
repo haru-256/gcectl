@@ -51,7 +51,7 @@ jobs:
           go-version-file: ./go/go.mod
           cache-dependency-path: ./go/go.sum
       - name: test
-        run: go test ./... -coverprofile=coverage.out
+        run: go test -tags=ci ./... -coverprofile=coverage.out
       - name: report coverage
         uses: k1LoW/octocov-action@v1
         with:

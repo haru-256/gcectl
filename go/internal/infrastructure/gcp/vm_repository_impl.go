@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	"github.com/haru-256/gcectl/internal/domain/repository"
 	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
@@ -76,7 +77,7 @@ func (r *VMRepository) SetProgressCallback(callback ProgressCallback) {
 	r.progressCallback = callback
 }
 
-func (r *VMRepository) FindByName(ctx context.Context, project, zone, name string) (*model.VM, error) {
+func (r *VMRepository) FindByName(ctx context.Context, vm *model.VM) (*model.VM, error) {
 	client, err := compute.NewInstancesRESTClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
@@ -88,9 +89,9 @@ func (r *VMRepository) FindByName(ctx context.Context, project, zone, name strin
 	}()
 
 	req := &computepb.GetInstanceRequest{
-		Project:  project,
-		Zone:     zone,
-		Instance: name,
+		Project:  vm.Project,
+		Zone:     vm.Zone,
+		Instance: vm.Name,
 	}
 
 	instance, err := client.Get(ctx, req)
@@ -115,7 +116,7 @@ func (r *VMRepository) FindAll(ctx context.Context) ([]*model.VM, error) {
 	for _, cfgVM := range cfg.VMs {
 		cfgVM := cfgVM // ループ変数のキャプチャ
 		eg.Go(func() error {
-			vm, findErr := r.FindByName(ctx, cfgVM.Project, cfgVM.Zone, cfgVM.Name)
+			vm, findErr := r.FindByName(ctx, cfgVM)
 			if findErr != nil {
 				// エラーをログに記録して続行
 				r.logger.Errorf("failed to find VM %s in project %s zone %s: %v", cfgVM.Name, cfgVM.Project, cfgVM.Zone, findErr)
@@ -558,3 +559,5 @@ func (r *VMRepository) waitOperator(ctx context.Context, op *compute.Operation) 
 	}
 	return nil
 }
+
+var _ repository.VMRepository = (*VMRepository)(nil)

@@ -10,7 +10,11 @@ endif
 
 .PHONY: test
 test: ## Execute tests
-	go test -race -shuffle=on ./...
+	go test -v -race -shuffle=on ./...
+
+.PHONY: test-all
+test-all: ## Execute all tests including integration tests
+	go test -v -race -tags=integration ./...
 
 .PHONY: lint
 lint: ## Run Linter
@@ -23,6 +27,10 @@ fmt: ## Run formatter
 .PHONY: init
 init: ## Initialize project
 	cobra-cli init
+
+.PHONY: generate-mocks
+generate-mocks: ## Generate mocks
+	go generate ./...
 
 .PHONY: build
 build: ## Build project

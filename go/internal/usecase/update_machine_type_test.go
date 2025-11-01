@@ -6,21 +6,22 @@ import (
 	"testing"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
+	mock_repository "github.com/haru-256/gcectl/internal/mock/repository"
+	"github.com/haru-256/gcectl/internal/usecase/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
-	//nolint:govet // field alignment is less important than readability in tests
 	tests := []struct {
-		name                  string
-		project               string
-		zone                  string
-		vmName                string
-		machineType           string
-		mockFindByName        func(ctx context.Context, project, zone, name string) (*model.VM, error)
-		mockUpdateMachineType func(ctx context.Context, vm *model.VM, machineType string) error
-		wantErr               bool
-		errContains           string
+		name        string
+		project     string
+		zone        string
+		vmName      string
+		machineType string
+		errContains string
+		setupMock   func(*mock_repository.MockVMRepository)
+		wantErr     bool
 	}{
 		{
 			name:        "success: update machine type of stopped VM",
@@ -28,17 +29,24 @@ func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 			zone:        "us-central1-a",
 			vmName:      "test-vm",
 			machineType: "e2-medium",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return &model.VM{
-					Name:        name,
-					Project:     project,
-					Zone:        zone,
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				vm := &model.VM{
+					Name:        "test-vm",
+					Project:     "test-project",
+					Zone:        "us-central1-a",
 					Status:      model.StatusStopped,
 					MachineType: "e2-small",
-				}, nil
-			},
-			mockUpdateMachineType: func(ctx context.Context, vm *model.VM, machineType string) error {
-				return nil
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, vm, vm, nil))
+				m.EXPECT().
+					UpdateMachineType(gomock.Any(), vm, "e2-medium").
+					DoAndReturn(func(ctx context.Context, inputVM *model.VM, machineType string) error {
+						assert.Equal(t, vm, inputVM)
+						assert.Equal(t, "e2-medium", machineType)
+						return nil
+					})
 			},
 			wantErr: false,
 		},
@@ -48,17 +56,24 @@ func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 			zone:        "us-central1-a",
 			vmName:      "test-vm",
 			machineType: "n1-standard-1",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return &model.VM{
-					Name:        name,
-					Project:     project,
-					Zone:        zone,
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				vm := &model.VM{
+					Name:        "test-vm",
+					Project:     "test-project",
+					Zone:        "us-central1-a",
 					Status:      model.StatusTerminated,
 					MachineType: "e2-small",
-				}, nil
-			},
-			mockUpdateMachineType: func(ctx context.Context, vm *model.VM, machineType string) error {
-				return nil
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, vm, vm, nil))
+				m.EXPECT().
+					UpdateMachineType(gomock.Any(), vm, "n1-standard-1").
+					DoAndReturn(func(ctx context.Context, inputVM *model.VM, machineType string) error {
+						assert.Equal(t, vm, inputVM)
+						assert.Equal(t, "n1-standard-1", machineType)
+						return nil
+					})
 			},
 			wantErr: false,
 		},
@@ -68,12 +83,18 @@ func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 			zone:        "us-central1-a",
 			vmName:      "nonexistent-vm",
 			machineType: "e2-medium",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return nil, errors.New("VM not found")
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				expectedVM := &model.VM{
+					Name:    "nonexistent-vm",
+					Project: "test-project",
+					Zone:    "us-central1-a",
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, expectedVM, nil, errors.New("VM not found")))
 			},
-			mockUpdateMachineType: nil,
-			wantErr:               true,
-			errContains:           "failed to find VM",
+			wantErr:     true,
+			errContains: "failed to find VM",
 		},
 		{
 			name:        "error: VM is running",
@@ -81,18 +102,20 @@ func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 			zone:        "us-central1-a",
 			vmName:      "running-vm",
 			machineType: "e2-medium",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return &model.VM{
-					Name:        name,
-					Project:     project,
-					Zone:        zone,
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				vm := &model.VM{
+					Name:        "running-vm",
+					Project:     "test-project",
+					Zone:        "us-central1-a",
 					Status:      model.StatusRunning,
 					MachineType: "e2-small",
-				}, nil
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, vm, vm, nil))
 			},
-			mockUpdateMachineType: nil,
-			wantErr:               true,
-			errContains:           "must be stopped",
+			wantErr:     true,
+			errContains: "must be stopped",
 		},
 		{
 			name:        "error: update operation failed",
@@ -100,17 +123,24 @@ func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 			zone:        "us-central1-a",
 			vmName:      "test-vm",
 			machineType: "e2-medium",
-			mockFindByName: func(ctx context.Context, project, zone, name string) (*model.VM, error) {
-				return &model.VM{
-					Name:        name,
-					Project:     project,
-					Zone:        zone,
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				vm := &model.VM{
+					Name:        "test-vm",
+					Project:     "test-project",
+					Zone:        "us-central1-a",
 					Status:      model.StatusStopped,
 					MachineType: "e2-small",
-				}, nil
-			},
-			mockUpdateMachineType: func(ctx context.Context, vm *model.VM, machineType string) error {
-				return errors.New("GCP API error")
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, vm, vm, nil))
+				m.EXPECT().
+					UpdateMachineType(gomock.Any(), vm, "e2-medium").
+					DoAndReturn(func(ctx context.Context, inputVM *model.VM, machineType string) error {
+						assert.Equal(t, vm, inputVM)
+						assert.Equal(t, "e2-medium", machineType)
+						return errors.New("GCP API error")
+					})
 			},
 			wantErr:     true,
 			errContains: "failed to update machine type",
@@ -119,10 +149,11 @@ func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := &mockVMRepository{
-				findByNameFunc:        tt.mockFindByName,
-				updateMachineTypeFunc: tt.mockUpdateMachineType,
-			}
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mock_repository.NewMockVMRepository(ctrl)
+			tt.setupMock(mockRepo)
 
 			usecase := NewUpdateMachineTypeUseCase(mockRepo)
 			err := usecase.Execute(context.Background(), tt.project, tt.zone, tt.vmName, tt.machineType)
