@@ -28,7 +28,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v5
         with:
           # goreleaserのバージョン指定
-          version: latest
+          version: "~> v2"
           # .goreleaser.yml の 'builds' セクションを実行
           args: release --clean
           workdir: ./go
