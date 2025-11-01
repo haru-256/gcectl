@@ -64,7 +64,7 @@ ARCHIVE_NAME="${REPO_NAME}_${VERSION_NUMBER}_${OS_NAME}_${ARCH_NAME}.tar.gz"
 echo "ダウンロード対象: $ARCHIVE_NAME"
 
 # --- 4. ダウンロードURLを取得 ---
-DOWNLOAD_URL=$(echo "$RELEASE_JSON" | grep -o "\"browser_download_url\": *\"https://[^"]*${ARCHIVE_NAME}\"" | cut -d '"' -f 4)
+DOWNLOAD_URL=$(echo "$RELEASE_JSON" | grep -o "\"browser_download_url\": *\"https://[^\"]*${ARCHIVE_NAME}\"" | cut -d '"' -f 4)
 
 if [ -z "$DOWNLOAD_URL" ]; then
   echo "エラー: ${ARCHIVE_NAME} のダウンロードURLが見つかりません。"
