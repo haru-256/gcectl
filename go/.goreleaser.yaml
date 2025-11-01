@@ -1,0 +1,71 @@
+version: 2
+
+project_name: gcectl
+
+git:
+  tag_sort: -version:refname
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: gcectl
+    main: ./main.go
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    # バージョン情報を埋め込む (推奨)
+    # -s -w はバイナリサイズを小さくするおまじない
+    # {{.Version}} などはGoReleaserがタグ名から自動で埋めてくれる変数
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+# バイナリをzipやtar.gzに圧縮する設定
+archives:
+  - id: gcectl
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+changelog:
+  use: github-native # GitHubのリリースノート自動生成を使う
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  github:
+    owner: haru256
+    name: gcectl
+  draft: false
+  prerelease: auto
+  make_latest: true
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+  footer: >-
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+# チェックサムファイルを生成
+checksum:
+  name_template: "checksums.txt"

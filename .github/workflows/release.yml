@@ -1,0 +1,38 @@
+name: Release Binaries
+
+# 実行トリガー: 'v' で始まるタグ (v1.0.0, v1.0.1など) がプッシュされた時
+on:
+  push:
+    tags:
+      - "go-v*"
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. リポジトリのコードをチェックアウト
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # タグの履歴をすべて取得 (GoReleaserが変更履歴を検出するため)
+          fetch-depth: 0
+
+      # 2. Go言語環境のセットアップ
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go/go.mod
+          cache-dependency-path: ./go/go.sum
+
+      # 3. GoReleaser アクションを実行
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          # goreleaserのバージョン指定
+          version: latest
+          # .goreleaser.yml の 'builds' セクションを実行
+          args: release --clean
+          workdir: ./go
+        env:
+          # リリースを作成・アップロードするために必要なトークン
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
