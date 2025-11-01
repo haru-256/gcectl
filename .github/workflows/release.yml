@@ -37,7 +37,7 @@ jobs:
           # goreleaserのバージョン指定
           version: "~> v2"
           # .goreleaser.yml の 'builds' セクションを実行
-          args: release --clean
+          args: release --clean --skip=validate # tag名を書き換えているので validate はスキップ
           workdir: ./go
         env:
           # リリースを作成・アップロードするために必要なトークン
