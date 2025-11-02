@@ -12,7 +12,6 @@ updates:
 
   - package-ecosystem: "terraform"
     directories:
-      - "terraform/"
       - "terraform/modules/gce"
       - "terraform/modules/google_project_services"
       - "terraform/modules/tfstate_gcs_bucket"
