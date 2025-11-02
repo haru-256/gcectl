@@ -35,7 +35,7 @@ jobs:
 
       # 4. GoReleaser アクションを実行
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           # goreleaserのバージョン指定
           version: "~> v2"
