@@ -21,7 +21,7 @@ jobs:
 
       # 2. Go言語環境のセットアップ
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: ./go/go.mod
           cache-dependency-path: ./go/go.sum
