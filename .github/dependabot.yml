@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "go/"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "terraform"
+    directories:
+      - "terraform/modules/gce"
+      - "terraform/modules/google_project_services"
+      - "terraform/modules/tfstate_gcs_bucket"
+    schedule:
+      interval: "monthly"
