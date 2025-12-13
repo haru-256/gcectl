@@ -14,7 +14,7 @@ jobs:
     steps:
       # 1. リポジトリのコードをチェックアウト
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           # タグの履歴をすべて取得 (GoReleaserが変更履歴を検出するため)
           fetch-depth: 0
