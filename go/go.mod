@@ -1,6 +1,6 @@
 module github.com/haru-256/gcectl
 
-go 1.24.0
+go 1.25.0
 
 // https://zenn.dev/uji/articles/adding-tool-dependencies-to-go-mod
 tool go.uber.org/mock/mockgen
@@ -12,7 +12,7 @@ require (
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
