@@ -8,10 +8,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/haru-256/gcectl/internal/domain/model"
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -35,23 +34,10 @@ func offRun(cmd *cobra.Command, args []string) {
 	vmNames := args
 	infraLog.DefaultLogger.Debugf("Turning off the instances %s", strings.Join(vmNames, ", "))
 
-	// parse config
-	cnf, err := config.ParseConfig(CnfPath)
+	vms, err := cli.ResolveVMsByName(CnfPath, vmNames)
 	if err != nil {
-		console.Error(fmt.Sprintf("Failed to parse config: %v\n", err))
+		console.Error(fmt.Sprintf("%v\n", err))
 		os.Exit(1)
-	}
-	infraLog.DefaultLogger.Debug(fmt.Sprintf("Config: %+v", cnf))
-
-	// domain entity変換
-	var vms []*model.VM
-	for _, vmName := range vmNames {
-		vm := cnf.GetVMByName(vmName)
-		if vm == nil {
-			console.Error(fmt.Sprintf("VM %s not found", vmName))
-			os.Exit(1)
-		}
-		vms = append(vms, vm)
 	}
 
 	// 依存性の注入
@@ -72,7 +58,7 @@ func offRun(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	console.Success(fmt.Sprintf("Turned on the instances: %v\n", strings.Join(vmNames, ", ")))
+	console.Success(fmt.Sprintf("Turned off the instances: %v\n", strings.Join(vmNames, ", ")))
 }
 
 func init() {
