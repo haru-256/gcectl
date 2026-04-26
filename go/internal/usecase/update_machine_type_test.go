@@ -100,6 +100,25 @@ func TestUpdateMachineTypeUseCase_Execute(t *testing.T) {
 			errContains: "failed to find VM",
 		},
 		{
+			name:        "error: repository returns nil VM without error",
+			project:     "test-project",
+			zone:        "us-central1-a",
+			vmName:      "missing-vm",
+			machineType: "e2-medium",
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				expectedVM := &model.VM{
+					Name:    "missing-vm",
+					Project: "test-project",
+					Zone:    "us-central1-a",
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, expectedVM, nil, nil))
+			},
+			wantErr:     true,
+			errContains: "not found",
+		},
+		{
 			name:        "error: VM is running",
 			project:     "test-project",
 			zone:        "us-central1-a",
