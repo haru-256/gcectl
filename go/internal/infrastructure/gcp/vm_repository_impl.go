@@ -19,22 +19,19 @@ import (
 //
 //nolint:govet // Field order optimized for readability over memory alignment
 type VMRepository struct {
-	configPath string
-	logger     log.Logger
+	logger log.Logger
 }
 
 // NewVMRepository creates a new VMRepository instance.
 //
 // Parameters:
-//   - configPath: Path to the configuration file
 //   - logger: Logger instance for logging
 //
 // Returns:
 //   - *VMRepository: A new repository instance
-func NewVMRepository(configPath string, logger log.Logger) *VMRepository {
+func NewVMRepository(logger log.Logger) *VMRepository {
 	return &VMRepository{
-		configPath: configPath,
-		logger:     logger,
+		logger: logger,
 	}
 }
 
@@ -367,7 +364,11 @@ func formatInstanceSchedulePolicy(policyName string, schedulePolicy *computepb.R
 	if schedulePolicy.VmStopSchedule == nil || schedulePolicy.VmStopSchedule.Schedule == nil {
 		return policyName
 	}
-	return fmt.Sprintf("%s(%s)", policyName, schedulePolicy.VmStopSchedule.GetSchedule())
+	schedule := schedulePolicy.VmStopSchedule.GetSchedule()
+	if schedule == "" {
+		return policyName
+	}
+	return fmt.Sprintf("%s(%s)", policyName, schedule)
 }
 
 func extractMachineType(fullURI string) string {

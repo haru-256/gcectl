@@ -35,6 +35,14 @@ func TestFormatInstanceSchedulePolicy(t *testing.T) {
 			want: "nightly-stop",
 		},
 		{
+			name:       "empty schedule returns policy name",
+			policyName: "nightly-stop",
+			policy: &computepb.ResourcePolicyInstanceSchedulePolicy{
+				VmStopSchedule: &computepb.ResourcePolicyInstanceSchedulePolicySchedule{Schedule: stringPtr("")},
+			},
+			want: "nightly-stop",
+		},
+		{
 			name:       "schedule returns policy name with schedule",
 			policyName: "nightly-stop",
 			policy: &computepb.ResourcePolicyInstanceSchedulePolicy{

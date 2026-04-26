@@ -30,7 +30,7 @@ Example:
 			os.Exit(1)
 		}
 
-		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
+		vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
 		listVMsUC := usecase.NewListVMsUseCase(vmRepo)
 
 		// List VMs
@@ -38,11 +38,6 @@ Example:
 		defer stop()
 
 		items, err := listVMsUC.Execute(ctx, cfg.VMs)
-		if err != nil {
-			console.Error(fmt.Sprintf("Failed to list VMs: %v\n", err))
-			os.Exit(1)
-		}
-
 		infraLog.DefaultLogger.Debugf("Found %d VMs", len(items))
 
 		// Convert usecase items to presenter items
@@ -60,7 +55,13 @@ Example:
 		}
 
 		// Render VM list
-		console.RenderVMList(presenterItems)
+		if len(presenterItems) > 0 {
+			console.RenderVMList(presenterItems)
+		}
+		if err != nil {
+			console.Error(fmt.Sprintf("Failed to list some VMs: %v\n", err))
+			os.Exit(1)
+		}
 	},
 }
 

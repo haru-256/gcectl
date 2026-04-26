@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
@@ -26,7 +27,6 @@ func NewDescribeVMUseCase(repo repository.VMRepository) *DescribeVMUseCase {
 //
 // Parameters:
 //   - ctx: Context for cancellation and timeout control
-//   - repo: VM repository interface for data access
 //   - project: GCP project ID
 //   - zone: GCP zone
 //   - name: VM instance name
@@ -38,7 +38,8 @@ func NewDescribeVMUseCase(repo repository.VMRepository) *DescribeVMUseCase {
 //
 // Example:
 //
-//	vm, uptime, err := DescribeVM(ctx, repo, "my-project", "us-central1-a", "my-vm")
+//	useCase := NewDescribeVMUseCase(repo)
+//	vm, uptime, err := useCase.Execute(ctx, "my-project", "us-central1-a", "my-vm")
 //	if err != nil {
 //	    return err
 //	}
@@ -53,6 +54,9 @@ func (u *DescribeVMUseCase) Execute(ctx context.Context, project, zone, name str
 	foundVM, err := u.repo.FindByName(ctx, vm)
 	if err != nil {
 		return nil, "", err
+	}
+	if foundVM == nil {
+		return nil, "", fmt.Errorf("VM %s: not found", name)
 	}
 
 	// Calculate uptime using shared logic

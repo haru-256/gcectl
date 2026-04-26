@@ -33,8 +33,8 @@ func getCnf(t *testing.T) (*config.Config, string) {
 }
 
 func TestVMRepositoryImpl_FindByName(t *testing.T) {
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
+	cnf, _ := getCnf(t)
+	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -87,8 +87,8 @@ func TestVMRepositoryImpl_StartStop(t *testing.T) {
 		t.Skip("Skipping long-running integration test in short mode")
 	}
 
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
+	cnf, _ := getCnf(t)
+	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
 
 	// Use the first configured VM for testing
@@ -168,8 +168,8 @@ func TestVMRepositoryImpl_UpdateMachineType(t *testing.T) {
 		t.Skip("Skipping long-running integration test in short mode")
 	}
 
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
+	cnf, _ := getCnf(t)
+	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
 
 	// Use the first configured VM for testing
@@ -248,8 +248,8 @@ func TestVMRepositoryImpl_SchedulePolicy(t *testing.T) {
 		t.Skip("Skipping long-running integration test in short mode")
 	}
 
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
+	cnf, _ := getCnf(t)
+	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
 
 	// Use the first configured VM for testing

@@ -114,6 +114,25 @@ func TestDescribeVM(t *testing.T) {
 			wantUptime: "",
 			wantErr:    true,
 		},
+		{
+			name:    "repository returns nil VM without error",
+			project: "test-project",
+			zone:    "us-central1-a",
+			vmName:  "missing-vm",
+			setupMock: func(m *mock_repository.MockVMRepository) {
+				expectedVM := &model.VM{
+					Name:    "missing-vm",
+					Project: "test-project",
+					Zone:    "us-central1-a",
+				}
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					DoAndReturn(testhelpers.VMFindByNameMatcher(t, expectedVM, nil, nil))
+			},
+			wantVM:     nil,
+			wantUptime: "",
+			wantErr:    true,
+		},
 	}
 
 	for _, tt := range tests {
