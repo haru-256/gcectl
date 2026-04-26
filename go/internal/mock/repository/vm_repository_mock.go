@@ -41,21 +41,6 @@ func (m *MockVMRepository) EXPECT() *MockVMRepositoryMockRecorder {
 	return m.recorder
 }
 
-// FindAll mocks base method.
-func (m *MockVMRepository) FindAll(ctx context.Context) ([]*model.VM, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindAll", ctx)
-	ret0, _ := ret[0].([]*model.VM)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FindAll indicates an expected call of FindAll.
-func (mr *MockVMRepositoryMockRecorder) FindAll(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAll", reflect.TypeOf((*MockVMRepository)(nil).FindAll), ctx)
-}
-
 // FindByName mocks base method.
 func (m *MockVMRepository) FindByName(ctx context.Context, vm *model.VM) (*model.VM, error) {
 	m.ctrl.T.Helper()

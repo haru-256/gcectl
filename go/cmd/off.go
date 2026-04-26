@@ -41,7 +41,7 @@ func offRun(cmd *cobra.Command, args []string) {
 	}
 
 	// 依存性の注入
-	vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
+	vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
 	stopVMUseCase := usecase.NewStopVMUseCase(vmRepo, infraLog.DefaultLogger)
 
 	// Turn off the instances

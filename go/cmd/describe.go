@@ -42,7 +42,7 @@ Example:
 		}
 
 		// 依存性の注入
-		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
+		vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
 		describeVMUseCase := usecase.NewDescribeVMUseCase(vmRepo)
 
 		// Describe the instance
