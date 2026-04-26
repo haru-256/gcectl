@@ -11,7 +11,7 @@ import (
 func LoadConfig(configPath string) (*config.Config, error) {
 	cfg, err := config.ParseConfig(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 	return cfg, nil
 }

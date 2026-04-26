@@ -10,8 +10,7 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	configPath := writeConfig(t, `
-default-project: test-project
+	configPath := writeConfig(t, `default-project: test-project
 default-zone: us-central1-a
 vm:
   - name: test-vm
@@ -26,8 +25,7 @@ vm:
 }
 
 func TestResolveVMsByName(t *testing.T) {
-	configPath := writeConfig(t, `
-default-project: test-project
+	configPath := writeConfig(t, `default-project: test-project
 default-zone: us-central1-a
 vm:
   - name: vm-a
@@ -46,8 +44,7 @@ vm:
 }
 
 func TestResolveVMsByNameReturnsMissingVM(t *testing.T) {
-	configPath := writeConfig(t, `
-default-project: test-project
+	configPath := writeConfig(t, `default-project: test-project
 default-zone: us-central1-a
 vm:
   - name: vm-a
