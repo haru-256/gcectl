@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -35,29 +35,21 @@ Example:
 			os.Exit(1)
 		}
 
-		// parse config
-		cnf, err := config.ParseConfig(CnfPath)
+		vm, err := cli.ResolveVMByName(CnfPath, vmName)
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to parse config: %v\n", err))
-			os.Exit(1)
-		}
-		infraLog.DefaultLogger.Debug(fmt.Sprintf("Config: %+v", cnf))
-
-		// filter VM by name
-		vm := cnf.GetVMByName(vmName)
-		if vm == nil {
-			console.Error(fmt.Sprintf("VM %s not found", vmName))
+			console.Error(fmt.Sprintf("%v\n", err))
 			os.Exit(1)
 		}
 
 		// 依存性の注入
 		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
+		describeVMUseCase := usecase.NewDescribeVMUseCase(vmRepo)
 
 		// Describe the instance
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		vmDetail, uptimeStr, err := usecase.DescribeVM(ctx, vmRepo, vm.Project, vm.Zone, vm.Name)
+		vmDetail, uptimeStr, err := describeVMUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name)
 		if err != nil {
 			console.Error(fmt.Sprintf("Failed to get VM info: %v\n", err))
 			os.Exit(1)

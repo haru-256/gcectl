@@ -124,7 +124,8 @@ func TestDescribeVM(t *testing.T) {
 			mockRepo := mock_repository.NewMockVMRepository(ctrl)
 			tt.setupMock(mockRepo)
 
-			vm, uptime, err := DescribeVM(context.Background(), mockRepo, tt.project, tt.zone, tt.vmName)
+			useCase := NewDescribeVMUseCase(mockRepo)
+			vm, uptime, err := useCase.Execute(context.Background(), tt.project, tt.zone, tt.vmName)
 
 			if tt.wantErr {
 				assert.Error(t, err, "DescribeVM() should return an error")

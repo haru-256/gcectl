@@ -19,6 +19,7 @@ var errTestList = errors.New("test error")
 func TestListVMsUseCase_Execute(t *testing.T) {
 	tests := []struct {
 		name        string
+		configured  []*model.VM
 		wantUptimes []string // Expected uptime strings for each VM
 		setupMock   func(*mock_repository.MockVMRepository)
 		wantLen     int
@@ -26,18 +27,19 @@ func TestListVMsUseCase_Execute(t *testing.T) {
 	}{
 		{
 			name: "single running VM with uptime",
+			configured: []*model.VM{
+				{Name: "test-vm", Project: "test-project", Zone: "us-central1-a"},
+			},
 			setupMock: func(m *mock_repository.MockVMRepository) {
-				vms := []*model.VM{
-					{
-						Name:          "test-vm",
-						Project:       "test-project",
-						Zone:          "us-central1-a",
-						MachineType:   "e2-medium",
-						Status:        model.StatusRunning,
-						LastStartTime: timePtr(time.Now().Add(-2 * time.Hour)),
-					},
+				vm := &model.VM{
+					Name:          "test-vm",
+					Project:       "test-project",
+					Zone:          "us-central1-a",
+					MachineType:   "e2-medium",
+					Status:        model.StatusRunning,
+					LastStartTime: timePtr(time.Now().Add(-2 * time.Hour)),
 				}
-				m.EXPECT().FindAll(gomock.Any()).Return(vms, nil)
+				m.EXPECT().FindByName(gomock.Any(), gomock.Any()).Return(vm, nil)
 			},
 			wantLen:     1,
 			wantUptimes: []string{"2h0m0s"}, // Approximately 2 hours
@@ -45,18 +47,19 @@ func TestListVMsUseCase_Execute(t *testing.T) {
 		},
 		{
 			name: "stopped VM returns N/A uptime",
+			configured: []*model.VM{
+				{Name: "stopped-vm", Project: "test-project", Zone: "us-central1-a"},
+			},
 			setupMock: func(m *mock_repository.MockVMRepository) {
-				vms := []*model.VM{
-					{
-						Name:          "stopped-vm",
-						Project:       "test-project",
-						Zone:          "us-central1-a",
-						MachineType:   "e2-medium",
-						Status:        model.StatusStopped,
-						LastStartTime: nil,
-					},
+				vm := &model.VM{
+					Name:          "stopped-vm",
+					Project:       "test-project",
+					Zone:          "us-central1-a",
+					MachineType:   "e2-medium",
+					Status:        model.StatusStopped,
+					LastStartTime: nil,
 				}
-				m.EXPECT().FindAll(gomock.Any()).Return(vms, nil)
+				m.EXPECT().FindByName(gomock.Any(), gomock.Any()).Return(vm, nil)
 			},
 			wantLen:     1,
 			wantUptimes: []string{"N/A"},
@@ -64,6 +67,10 @@ func TestListVMsUseCase_Execute(t *testing.T) {
 		},
 		{
 			name: "multiple VMs with mixed statuses",
+			configured: []*model.VM{
+				{Name: "running-vm", Project: "test-project", Zone: "us-central1-a"},
+				{Name: "stopped-vm", Project: "test-project", Zone: "us-west1-a"},
+			},
 			setupMock: func(m *mock_repository.MockVMRepository) {
 				vms := []*model.VM{
 					{
@@ -83,7 +90,19 @@ func TestListVMsUseCase_Execute(t *testing.T) {
 						LastStartTime: nil,
 					},
 				}
-				m.EXPECT().FindAll(gomock.Any()).Return(vms, nil)
+				m.EXPECT().
+					FindByName(gomock.Any(), gomock.Any()).
+					Times(2).
+					DoAndReturn(func(ctx context.Context, vm *model.VM) (*model.VM, error) {
+						switch vm.Name {
+						case "running-vm":
+							return vms[0], nil
+						case "stopped-vm":
+							return vms[1], nil
+						default:
+							return nil, errors.New("unexpected VM")
+						}
+					})
 			},
 			wantLen:     2,
 			wantUptimes: []string{"30m0s", "N/A"},
@@ -91,8 +110,11 @@ func TestListVMsUseCase_Execute(t *testing.T) {
 		},
 		{
 			name: "repository error",
+			configured: []*model.VM{
+				{Name: "error-vm", Project: "test-project", Zone: "us-central1-a"},
+			},
 			setupMock: func(m *mock_repository.MockVMRepository) {
-				m.EXPECT().FindAll(gomock.Any()).Return(nil, errTestList)
+				m.EXPECT().FindByName(gomock.Any(), gomock.Any()).Return(nil, errTestList)
 			},
 			wantLen:     0,
 			wantUptimes: nil,
@@ -111,7 +133,7 @@ func TestListVMsUseCase_Execute(t *testing.T) {
 			useCase := NewListVMsUseCase(mockRepo)
 			ctx := context.Background()
 
-			items, err := useCase.Execute(ctx)
+			items, err := useCase.Execute(ctx, tt.configured)
 
 			// Check error
 			if tt.wantError {

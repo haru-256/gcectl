@@ -137,6 +137,13 @@ func (v *VM) CanStop() bool {
 	return v.Status == StatusRunning
 }
 
+// CanChangeMachineType checks if the VM can have its machine type changed.
+//
+// GCE requires an instance to be stopped before changing its machine type.
+func (v *VM) CanChangeMachineType() bool {
+	return v.Status == StatusStopped || v.Status == StatusTerminated
+}
+
 var (
 	ErrVMNotRunning = errors.New("VM is not running")
 	ErrNoStartTime  = errors.New("VM start time is not available")

@@ -13,9 +13,6 @@ type VMRepository interface {
 	// FindByName retrieves a VM by its name, project, and zone
 	FindByName(ctx context.Context, vm *model.VM) (*model.VM, error)
 
-	// FindAll retrieves all VMs from the configuration
-	FindAll(ctx context.Context) ([]*model.VM, error)
-
 	// Start starts a VM instance
 	Start(ctx context.Context, vm *model.VM) error
 

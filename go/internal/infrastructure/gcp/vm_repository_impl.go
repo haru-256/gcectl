@@ -9,11 +9,9 @@ import (
 
 	compute "cloud.google.com/go/compute/apiv1"
 	"cloud.google.com/go/compute/apiv1/computepb"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
 
@@ -40,16 +38,22 @@ func NewVMRepository(configPath string, logger log.Logger) *VMRepository {
 	}
 }
 
+func (r *VMRepository) newInstancesClient(ctx context.Context) (*compute.InstancesClient, error) {
+	return compute.NewInstancesRESTClient(ctx)
+}
+
+func (r *VMRepository) closeInstancesClient(client *compute.InstancesClient) {
+	if closeErr := client.Close(); closeErr != nil {
+		r.logger.Errorf("Failed to close client: %v", closeErr)
+	}
+}
+
 func (r *VMRepository) FindByName(ctx context.Context, vm *model.VM) (*model.VM, error) {
-	client, err := compute.NewInstancesRESTClient(ctx)
+	client, err := r.newInstancesClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
-	defer func() {
-		if closeErr := client.Close(); closeErr != nil {
-			r.logger.Errorf("Failed to close client: %v", closeErr)
-		}
-	}()
+	defer r.closeInstancesClient(client)
 
 	req := &computepb.GetInstanceRequest{
 		Project:  vm.Project,
@@ -65,56 +69,12 @@ func (r *VMRepository) FindByName(ctx context.Context, vm *model.VM) (*model.VM,
 	return r.toModel(ctx, instance)
 }
 
-func (r *VMRepository) FindAll(ctx context.Context) ([]*model.VM, error) {
-	// 設定ファイルから VM リストを読み込み
-	cfg, err := config.ParseConfig(r.configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
-	}
-
-	// errgroup を使用して並行実行
-	eg, ctx := errgroup.WithContext(ctx)
-	vmChan := make(chan *model.VM, len(cfg.VMs))
-
-	for _, cfgVM := range cfg.VMs {
-		cfgVM := cfgVM // ループ変数のキャプチャ
-		eg.Go(func() error {
-			vm, findErr := r.FindByName(ctx, cfgVM)
-			if findErr != nil {
-				// エラーをログに記録して続行
-				r.logger.Errorf("failed to find VM %s in project %s zone %s: %v", cfgVM.Name, cfgVM.Project, cfgVM.Zone, findErr)
-				return nil // エラーを返さずに続行
-			}
-			vmChan <- vm
-			return nil
-		})
-	}
-
-	// すべてのゴルーチンが完了するのを待つ
-	if waitErr := eg.Wait(); waitErr != nil {
-		return nil, fmt.Errorf("failed to fetch VMs: %w", waitErr)
-	}
-	close(vmChan)
-
-	// チャネルから結果を収集
-	vms := make([]*model.VM, 0, len(cfg.VMs))
-	for vm := range vmChan {
-		vms = append(vms, vm)
-	}
-
-	return vms, nil
-}
-
 func (r *VMRepository) Start(ctx context.Context, vm *model.VM) error {
-	client, err := compute.NewInstancesRESTClient(ctx)
+	client, err := r.newInstancesClient(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
-	defer func() {
-		if closeErr := client.Close(); closeErr != nil {
-			r.logger.Errorf("Failed to close client: %v", closeErr)
-		}
-	}()
+	defer r.closeInstancesClient(client)
 
 	req := &computepb.StartInstanceRequest{
 		Project:  vm.Project,
@@ -131,15 +91,11 @@ func (r *VMRepository) Start(ctx context.Context, vm *model.VM) error {
 }
 
 func (r *VMRepository) Stop(ctx context.Context, vm *model.VM) error {
-	client, err := compute.NewInstancesRESTClient(ctx)
+	client, err := r.newInstancesClient(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
-	defer func() {
-		if closeErr := client.Close(); closeErr != nil {
-			r.logger.Errorf("Failed to close client: %v", closeErr)
-		}
-	}()
+	defer r.closeInstancesClient(client)
 
 	req := &computepb.StopInstanceRequest{
 		Project:  vm.Project,
@@ -158,16 +114,12 @@ func (r *VMRepository) Stop(ctx context.Context, vm *model.VM) error {
 // SetSchedulePolicy attaches a schedule policy to a Google Compute Engine instance.
 func (r *VMRepository) SetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
 	// Create a new InstancesClient with authentication
-	client, err := compute.NewInstancesRESTClient(ctx)
+	client, err := r.newInstancesClient(ctx)
 	if err != nil {
 		r.logger.Errorf("failed to create Instances client: %v", err)
 		return fmt.Errorf("failed to create client: %w", err)
 	}
-	defer func() {
-		if closeErr := client.Close(); closeErr != nil {
-			r.logger.Errorf("Failed to close client: %v", closeErr)
-		}
-	}()
+	defer r.closeInstancesClient(client)
 
 	// Get instance details
 	req := &computepb.GetInstanceRequest{
@@ -219,16 +171,12 @@ func (r *VMRepository) SetSchedulePolicy(ctx context.Context, vm *model.VM, poli
 // UnsetSchedulePolicy removes a schedule policy from a Google Compute Engine instance.
 func (r *VMRepository) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
 	// Create a new InstancesClient with authentication
-	client, err := compute.NewInstancesRESTClient(ctx)
+	client, err := r.newInstancesClient(ctx)
 	if err != nil {
 		r.logger.Errorf("failed to create Instances client: %v", err)
 		return fmt.Errorf("failed to create client: %w", err)
 	}
-	defer func() {
-		if closeErr := client.Close(); closeErr != nil {
-			r.logger.Errorf("Failed to close client: %v", closeErr)
-		}
-	}()
+	defer r.closeInstancesClient(client)
 
 	// Get instance details
 	req := &computepb.GetInstanceRequest{
@@ -280,16 +228,12 @@ func (r *VMRepository) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, po
 // UpdateMachineType changes the machine type of a VM instance.
 func (r *VMRepository) UpdateMachineType(ctx context.Context, vm *model.VM, machineType string) error {
 	// Create a new InstancesClient with authentication
-	client, err := compute.NewInstancesRESTClient(ctx)
+	client, err := r.newInstancesClient(ctx)
 	if err != nil {
 		r.logger.Errorf("failed to create Instances client: %v", err)
 		return fmt.Errorf("failed to create client: %w", err)
 	}
-	defer func() {
-		if closeErr := client.Close(); closeErr != nil {
-			r.logger.Errorf("Failed to close client: %v", closeErr)
-		}
-	}()
+	defer r.closeInstancesClient(client)
 
 	// Machine type must be in the format: zones/ZONE/machineTypes/MACHINE_TYPE
 	machineTypeURL := fmt.Sprintf("zones/%s/machineTypes/%s", vm.Zone, machineType)
@@ -359,11 +303,9 @@ func (r *VMRepository) toModel(ctx context.Context, instance *computepb.Instance
 }
 
 func (r *VMRepository) getSchedulePolicy(ctx context.Context, instance *computepb.Instance) (string, error) {
-	defaultPolicy := "#NONE"
-
 	policies := instance.GetResourcePolicies()
 	if len(policies) == 0 {
-		return defaultPolicy, nil
+		return "", nil
 	}
 
 	policyClient, err := compute.NewResourcePoliciesRESTClient(ctx)
@@ -410,12 +352,22 @@ func (r *VMRepository) getSchedulePolicy(ctx context.Context, instance *computep
 		}
 
 		schedulePolicy := resourcePolicy.GetInstanceSchedulePolicy()
-		if schedulePolicy != nil {
-			return fmt.Sprintf("%s(%s)", policyName, *schedulePolicy.VmStopSchedule.Schedule), nil
+		if formattedPolicy := formatInstanceSchedulePolicy(policyName, schedulePolicy); formattedPolicy != "" {
+			return formattedPolicy, nil
 		}
 	}
 
-	return defaultPolicy, nil
+	return "", nil
+}
+
+func formatInstanceSchedulePolicy(policyName string, schedulePolicy *computepb.ResourcePolicyInstanceSchedulePolicy) string {
+	if schedulePolicy == nil {
+		return ""
+	}
+	if schedulePolicy.VmStopSchedule == nil || schedulePolicy.VmStopSchedule.Schedule == nil {
+		return policyName
+	}
+	return fmt.Sprintf("%s(%s)", policyName, schedulePolicy.VmStopSchedule.GetSchedule())
 }
 
 func extractMachineType(fullURI string) string {

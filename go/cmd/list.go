@@ -8,6 +8,7 @@ import (
 
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -22,15 +23,21 @@ Example:
   gcectl list`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// 依存性の注入
-		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
 		console := presenter.NewConsolePresenter()
+		cfg, err := cli.LoadConfig(CnfPath)
+		if err != nil {
+			console.Error(fmt.Sprintf("%v\n", err))
+			os.Exit(1)
+		}
+
+		vmRepo := gcp.NewVMRepository(CnfPath, infraLog.DefaultLogger)
 		listVMsUC := usecase.NewListVMsUseCase(vmRepo)
 
 		// List VMs
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		items, err := listVMsUC.Execute(ctx)
+		items, err := listVMsUC.Execute(ctx, cfg.VMs)
 		if err != nil {
 			console.Error(fmt.Sprintf("Failed to list VMs: %v\n", err))
 			os.Exit(1)

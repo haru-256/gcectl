@@ -2,10 +2,12 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
+	"golang.org/x/sync/errgroup"
 )
 
 // VMListItem represents a VM with its display information including uptime.
@@ -34,7 +36,7 @@ func NewListVMsUseCase(repo repository.VMRepository) *ListVMsUseCase {
 	}
 }
 
-// Execute retrieves all VMs and calculates their uptime strings.
+// Execute retrieves the configured VMs and calculates their uptime strings.
 //
 // This method encapsulates the business logic of calculating uptime,
 // which should not be in the presentation layer. For each VM, it:
@@ -58,19 +60,32 @@ func NewListVMsUseCase(repo repository.VMRepository) *ListVMsUseCase {
 //	for _, item := range items {
 //	    fmt.Printf("%s: %s\n", item.VM.Name, item.Uptime)
 //	}
-func (u *ListVMsUseCase) Execute(ctx context.Context) ([]VMListItem, error) {
-	vms, err := u.repo.FindAll(ctx)
-	if err != nil {
-		return nil, err
+func (u *ListVMsUseCase) Execute(ctx context.Context, configuredVMs []*model.VM) ([]VMListItem, error) {
+	now := time.Now()
+	items := make([]VMListItem, len(configuredVMs))
+	eg, ctx := errgroup.WithContext(ctx)
+
+	for i, configuredVM := range configuredVMs {
+		i, configuredVM := i, configuredVM
+		eg.Go(func() error {
+			vm, err := u.repo.FindByName(ctx, configuredVM)
+			if err != nil {
+				return fmt.Errorf("failed to find VM %s: %w", configuredVM.Name, err)
+			}
+			if vm == nil {
+				return fmt.Errorf("VM %s: not found", configuredVM.Name)
+			}
+
+			items[i] = VMListItem{
+				VM:     vm,
+				Uptime: calculateUptimeString(vm, now),
+			}
+			return nil
+		})
 	}
 
-	now := time.Now()
-	items := make([]VMListItem, len(vms))
-	for i, vm := range vms {
-		items[i] = VMListItem{
-			VM:     vm,
-			Uptime: calculateUptimeString(vm, now),
-		}
+	if err := eg.Wait(); err != nil {
+		return nil, err
 	}
 
 	return items, nil

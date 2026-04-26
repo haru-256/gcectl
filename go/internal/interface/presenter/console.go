@@ -123,7 +123,7 @@ func (p *ConsolePresenter) RenderVMList(items []VMListItem) {
 			item.Zone,
 			item.MachineType,
 			statusEmoji + " " + item.Status.String(),
-			item.SchedulePolicy,
+			formatSchedulePolicy(item.SchedulePolicy),
 			item.Uptime,
 		})
 	}
@@ -167,11 +167,18 @@ func (p *ConsolePresenter) RenderVMDetail(detail VMDetail) {
 		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[2]), itemPaddings[2], detail.Zone),
 		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[3]), itemPaddings[3], detail.MachineType),
 		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[4]), itemPaddings[4], detail.Status.String()),
-		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[5]), itemPaddings[5], detail.SchedulePolicy),
+		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[5]), itemPaddings[5], formatSchedulePolicy(detail.SchedulePolicy)),
 		fmt.Sprintf("%s%s: %s", prefixStyle.Render(listItemsHeader[6]), itemPaddings[6], detail.Uptime),
 	).Enumerator(list.Bullet).EnumeratorStyle(lipgloss.NewStyle().Padding(0, 1))
 
 	fmt.Println(l)
+}
+
+func formatSchedulePolicy(policy string) string {
+	if policy == "" {
+		return "#NONE"
+	}
+	return policy
 }
 
 // RenderVersion renders version information in a list format.

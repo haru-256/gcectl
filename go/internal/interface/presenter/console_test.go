@@ -327,6 +327,32 @@ func TestGetStatusEmoji(t *testing.T) {
 	}
 }
 
+func TestFormatSchedulePolicy(t *testing.T) {
+	tests := []struct {
+		name   string
+		policy string
+		want   string
+	}{
+		{
+			name:   "empty policy displays none",
+			policy: "",
+			want:   "#NONE",
+		},
+		{
+			name:   "non-empty policy is unchanged",
+			policy: "nightly-stop(0 22 * * *)",
+			want:   "nightly-stop(0 22 * * *)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := formatSchedulePolicy(tt.policy)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestGetItemPaddings(t *testing.T) {
 	tests := []struct {
 		name    string

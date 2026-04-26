@@ -62,7 +62,7 @@ func (uc *UpdateMachineTypeUseCase) Execute(ctx context.Context, project, zone, 
 	}
 
 	// 2. ビジネスルールチェック（VMは停止状態である必要がある）
-	if foundVM.CanStop() {
+	if !foundVM.CanChangeMachineType() {
 		return fmt.Errorf("VM %s must be stopped before changing machine type (current status: %s)", foundVM.Name, foundVM.Status)
 	}
 

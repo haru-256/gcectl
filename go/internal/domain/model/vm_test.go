@@ -179,6 +179,48 @@ func TestVM_CanStop(t *testing.T) {
 	}
 }
 
+func TestVM_CanChangeMachineType(t *testing.T) {
+	tests := []struct {
+		name   string
+		status Status
+		want   bool
+	}{
+		{
+			name:   "can change machine type when stopped",
+			status: StatusStopped,
+			want:   true,
+		},
+		{
+			name:   "can change machine type when terminated",
+			status: StatusTerminated,
+			want:   true,
+		},
+		{
+			name:   "cannot change machine type when running",
+			status: StatusRunning,
+			want:   false,
+		},
+		{
+			name:   "cannot change machine type when provisioning",
+			status: StatusProvisioning,
+			want:   false,
+		},
+		{
+			name:   "cannot change machine type when unknown",
+			status: StatusUnknown,
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vm := &VM{Status: tt.status}
+			got := vm.CanChangeMachineType()
+			assert.Equal(t, tt.want, got, "VM.CanChangeMachineType() with status %v should return %v", tt.status, tt.want)
+		})
+	}
+}
+
 func TestVM_Uptime(t *testing.T) {
 	startTime := time.Date(2025, 10, 11, 10, 0, 0, 0, time.UTC)
 	now := time.Date(2025, 10, 11, 12, 30, 0, 0, time.UTC)
