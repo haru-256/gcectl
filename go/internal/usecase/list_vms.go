@@ -80,13 +80,13 @@ func (u *ListVMsUseCase) Execute(ctx context.Context, configuredVMs []*model.VM)
 			vm, err := u.repo.FindByName(ctx, configuredVM)
 			if err != nil {
 				mu.Lock()
-				errs = append(errs, fmt.Errorf("failed to find VM %s: %w", configuredVM.Name, err))
+				errs = append(errs, fmt.Errorf("VM %s (project=%s, zone=%s): failed to find: %w", configuredVM.Name, configuredVM.Project, configuredVM.Zone, err))
 				mu.Unlock()
 				return nil
 			}
 			if vm == nil {
 				mu.Lock()
-				errs = append(errs, fmt.Errorf("VM %s: not found", configuredVM.Name))
+				errs = append(errs, fmt.Errorf("VM %s (project=%s, zone=%s): not found", configuredVM.Name, configuredVM.Project, configuredVM.Zone))
 				mu.Unlock()
 				return nil
 			}
