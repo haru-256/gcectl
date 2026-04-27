@@ -2,6 +2,7 @@ package gcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -10,11 +11,19 @@ import (
 
 	compute "cloud.google.com/go/compute/apiv1"
 	"cloud.google.com/go/compute/apiv1/computepb"
+	"github.com/googleapis/gax-go/v2"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
 	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
+
+type resourcePoliciesClient interface {
+	Get(context.Context, *computepb.GetResourcePolicyRequest, ...gax.CallOption) (*computepb.ResourcePolicy, error)
+	Close() error
+}
+
+type newResourcePoliciesClientFunc func(context.Context) (resourcePoliciesClient, error)
 
 // VMRepository implements the repository.VMRepository interface for GCP.
 //
@@ -22,9 +31,10 @@ import (
 type VMRepository struct {
 	logger log.Logger
 
-	policyClientOnce sync.Once
-	policyClient     *compute.ResourcePoliciesClient
-	policyClientErr  error
+	policyClientMu            sync.Mutex
+	policyClient              resourcePoliciesClient
+	newResourcePoliciesClient newResourcePoliciesClientFunc
+	closed                    bool
 }
 
 // NewVMRepository creates a new VMRepository instance.
@@ -36,17 +46,22 @@ type VMRepository struct {
 //   - *VMRepository: A new repository instance
 func NewVMRepository(logger log.Logger) *VMRepository {
 	return &VMRepository{
-		logger: logger,
+		logger:                    logger,
+		newResourcePoliciesClient: defaultNewResourcePoliciesClient,
 	}
 }
 
 // Close releases any resources held by the repository, including GCP clients.
-// Close must not be called concurrently with other methods on the repository.
 func (r *VMRepository) Close() {
+	r.policyClientMu.Lock()
+	defer r.policyClientMu.Unlock()
+
+	r.closed = true
 	if r.policyClient != nil {
 		if err := r.policyClient.Close(); err != nil {
 			r.logger.Errorf("Failed to close policy client: %v", err)
 		}
+		r.policyClient = nil
 	}
 }
 
@@ -56,18 +71,30 @@ func (r *VMRepository) Close() {
 // cancellation and deadlines still come from the context passed to each client
 // method, such as ResourcePoliciesClient.Get(ctx, req).
 //
-// Because initialization is guarded by sync.Once, an initialization error is
-// cached for the lifetime of this repository. This is acceptable for the
-// current short-lived CLI command scope, but a longer-lived repository would
-// need retryable initialization or eager construction in NewVMRepository.
-func (r *VMRepository) getPolicyClient(ctx context.Context) (*compute.ResourcePoliciesClient, error) {
-	r.policyClientOnce.Do(func() {
-		r.policyClient, r.policyClientErr = compute.NewResourcePoliciesRESTClient(ctx)
-		if r.policyClientErr != nil {
-			r.logger.Errorf("Failed to create ResourcePolicies client: %v", r.policyClientErr)
-		}
-	})
-	return r.policyClient, r.policyClientErr
+// Initialization is retryable: failures are returned to the caller without
+// being cached, so a later call with a fresh context can create the client.
+func (r *VMRepository) getPolicyClient(ctx context.Context) (resourcePoliciesClient, error) {
+	r.policyClientMu.Lock()
+	defer r.policyClientMu.Unlock()
+
+	if r.closed {
+		return nil, errors.New("VMRepository is closed")
+	}
+	if r.policyClient != nil {
+		return r.policyClient, nil
+	}
+
+	policyClient, err := r.newResourcePoliciesClient(ctx)
+	if err != nil {
+		r.logger.Errorf("Failed to create ResourcePolicies client: %v", err)
+		return nil, err
+	}
+	r.policyClient = policyClient
+	return r.policyClient, nil
+}
+
+func defaultNewResourcePoliciesClient(ctx context.Context) (resourcePoliciesClient, error) {
+	return compute.NewResourcePoliciesRESTClient(ctx)
 }
 
 func (r *VMRepository) newInstancesClient(ctx context.Context) (*compute.InstancesClient, error) {
