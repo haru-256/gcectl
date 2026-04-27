@@ -51,6 +51,15 @@ func (r *VMRepository) Close() {
 }
 
 // getPolicyClient returns the shared ResourcePoliciesClient, creating it lazily on first use.
+//
+// The context passed here is used for client initialization only. Request-level
+// cancellation and deadlines still come from the context passed to each client
+// method, such as ResourcePoliciesClient.Get(ctx, req).
+//
+// Because initialization is guarded by sync.Once, an initialization error is
+// cached for the lifetime of this repository. This is acceptable for the
+// current short-lived CLI command scope, but a longer-lived repository would
+// need retryable initialization or eager construction in NewVMRepository.
 func (r *VMRepository) getPolicyClient(ctx context.Context) (*compute.ResourcePoliciesClient, error) {
 	r.policyClientOnce.Do(func() {
 		r.policyClient, r.policyClientErr = compute.NewResourcePoliciesRESTClient(ctx)
