@@ -57,12 +57,14 @@ func (r *VMRepository) Close() {
 	defer r.policyClientMu.Unlock()
 
 	r.closed = true
+func (r *VMRepository) Close() error {
 	if r.policyClient != nil {
 		if err := r.policyClient.Close(); err != nil {
 			r.logger.Errorf("Failed to close policy client: %v", err)
+			return fmt.Errorf("failed to close policy client: %w", err)
 		}
-		r.policyClient = nil
 	}
+	return nil
 }
 
 // getPolicyClient returns the shared ResourcePoliciesClient, creating it lazily on first use.
