@@ -41,6 +41,7 @@ func NewVMRepository(logger log.Logger) *VMRepository {
 }
 
 // Close releases any resources held by the repository, including GCP clients.
+// Close must not be called concurrently with other methods on the repository.
 func (r *VMRepository) Close() {
 	if r.policyClient != nil {
 		if err := r.policyClient.Close(); err != nil {
