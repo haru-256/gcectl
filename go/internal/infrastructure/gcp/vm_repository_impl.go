@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	compute "cloud.google.com/go/compute/apiv1"
@@ -20,6 +21,10 @@ import (
 //nolint:govet // Field order optimized for readability over memory alignment
 type VMRepository struct {
 	logger log.Logger
+
+	policyClientOnce sync.Once
+	policyClient     *compute.ResourcePoliciesClient
+	policyClientErr  error
 }
 
 // NewVMRepository creates a new VMRepository instance.
@@ -33,6 +38,26 @@ func NewVMRepository(logger log.Logger) *VMRepository {
 	return &VMRepository{
 		logger: logger,
 	}
+}
+
+// Close releases any resources held by the repository, including GCP clients.
+func (r *VMRepository) Close() {
+	if r.policyClient != nil {
+		if err := r.policyClient.Close(); err != nil {
+			r.logger.Errorf("Failed to close policy client: %v", err)
+		}
+	}
+}
+
+// getPolicyClient returns the shared ResourcePoliciesClient, creating it lazily on first use.
+func (r *VMRepository) getPolicyClient(ctx context.Context) (*compute.ResourcePoliciesClient, error) {
+	r.policyClientOnce.Do(func() {
+		r.policyClient, r.policyClientErr = compute.NewResourcePoliciesRESTClient(ctx)
+		if r.policyClientErr != nil {
+			r.logger.Errorf("Failed to create ResourcePolicies client: %v", r.policyClientErr)
+		}
+	})
+	return r.policyClient, r.policyClientErr
 }
 
 func (r *VMRepository) newInstancesClient(ctx context.Context) (*compute.InstancesClient, error) {
@@ -305,16 +330,10 @@ func (r *VMRepository) getSchedulePolicy(ctx context.Context, instance *computep
 		return "", nil
 	}
 
-	policyClient, err := compute.NewResourcePoliciesRESTClient(ctx)
+	policyClient, err := r.getPolicyClient(ctx)
 	if err != nil {
-		r.logger.Errorf("Failed to create ResourcePolicies client: %v", err)
 		return "", err
 	}
-	defer func() {
-		if closeErr := policyClient.Close(); closeErr != nil {
-			r.logger.Errorf("Failed to close policy client: %v", closeErr)
-		}
-	}()
 
 	project, err := extractProject(instance.GetSelfLink())
 	if err != nil {

@@ -46,6 +46,7 @@ Example:
 
 		// 依存性の注入
 		vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
+		defer vmRepo.Close()
 
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
