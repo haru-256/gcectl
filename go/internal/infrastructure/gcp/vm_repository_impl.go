@@ -361,7 +361,7 @@ func formatInstanceSchedulePolicy(policyName string, schedulePolicy *computepb.R
 	if schedulePolicy == nil {
 		return ""
 	}
-	if schedulePolicy.VmStopSchedule == nil || schedulePolicy.VmStopSchedule.Schedule == nil {
+	if schedulePolicy.VmStopSchedule == nil {
 		return policyName
 	}
 	schedule := schedulePolicy.VmStopSchedule.GetSchedule()
