@@ -300,11 +300,9 @@ func (r *VMRepository) toModel(ctx context.Context, instance *computepb.Instance
 }
 
 func (r *VMRepository) getSchedulePolicy(ctx context.Context, instance *computepb.Instance) (string, error) {
-	defaultPolicy := "#NONE"
-
 	policies := instance.GetResourcePolicies()
 	if len(policies) == 0 {
-		return defaultPolicy, nil
+		return "", nil
 	}
 
 	policyClient, err := compute.NewResourcePoliciesRESTClient(ctx)
@@ -351,12 +349,26 @@ func (r *VMRepository) getSchedulePolicy(ctx context.Context, instance *computep
 		}
 
 		schedulePolicy := resourcePolicy.GetInstanceSchedulePolicy()
-		if schedulePolicy != nil {
-			return fmt.Sprintf("%s(%s)", policyName, *schedulePolicy.VmStopSchedule.Schedule), nil
+		if formattedPolicy := formatInstanceSchedulePolicy(policyName, schedulePolicy); formattedPolicy != "" {
+			return formattedPolicy, nil
 		}
 	}
 
-	return defaultPolicy, nil
+	return "", nil
+}
+
+func formatInstanceSchedulePolicy(policyName string, schedulePolicy *computepb.ResourcePolicyInstanceSchedulePolicy) string {
+	if schedulePolicy == nil {
+		return ""
+	}
+	if schedulePolicy.VmStopSchedule == nil {
+		return policyName
+	}
+	schedule := schedulePolicy.VmStopSchedule.GetSchedule()
+	if schedule == "" {
+		return policyName
+	}
+	return fmt.Sprintf("%s(%s)", policyName, schedule)
 }
 
 func extractMachineType(fullURI string) string {
