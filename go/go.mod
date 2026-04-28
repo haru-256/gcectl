@@ -9,8 +9,8 @@ require (
 	cloud.google.com/go/compute v1.60.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
-	github.com/googleapis/gax-go/v2 v2.21.0
-	github.com/spf13/cobra v1.10.1
+	github.com/googleapis/gax-go/v2 v2.22.0
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
 	golang.org/x/sync v0.20.0
