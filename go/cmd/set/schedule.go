@@ -40,13 +40,13 @@ Example:
 
 		cfg, err := config.NewConfig(cnfPath)
 		if err != nil {
-			console.Error(fmt.Sprintf("%v\n", err))
+			console.Error(err.Error())
 			os.Exit(1)
 		}
 
 		vm, err := cfg.ResolveVM(vmName)
 		if err != nil {
-			console.Error(fmt.Sprintf("%v\n", err))
+			console.Error(err.Error())
 			os.Exit(1)
 		}
 
@@ -56,7 +56,7 @@ Example:
 		// 依存性の注入
 		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to create VM repository: %v\n", err))
+			console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
 			os.Exit(1)
 		}
 		defer func() {
@@ -79,10 +79,10 @@ Example:
 			})
 
 			if err != nil {
-				console.Error(fmt.Sprintf("Failed to unset schedule-policy: %v\n", err))
+				console.Error(fmt.Sprintf("Failed to unset schedule-policy: %v", err))
 				os.Exit(1)
 			}
-			console.Success(fmt.Sprintf("Unset schedule-policy: %v\n", policyName))
+			console.Success(fmt.Sprintf("Unset schedule-policy: %v", policyName))
 		} else {
 			infraLog.DefaultLogger.Debugf("Set schedule-policy")
 			setSchedulePolicyUseCase := usecase.NewSetSchedulePolicyUseCase(vmRepo, infraLog.DefaultLogger)
@@ -94,10 +94,10 @@ Example:
 			})
 
 			if err != nil {
-				console.Error(fmt.Sprintf("Failed to set schedule-policy: %v\n", err))
+				console.Error(fmt.Sprintf("Failed to set schedule-policy: %v", err))
 				os.Exit(1)
 			}
-			console.Success(fmt.Sprintf("Set schedule-policy: %v\n", policyName))
+			console.Success(fmt.Sprintf("Set schedule-policy: %v", policyName))
 		}
 	},
 }

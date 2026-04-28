@@ -147,6 +147,7 @@ func TestConfig_ResolveVMs(t *testing.T) {
 			vms, err := cfg.ResolveVMs(tt.vmNames)
 			if tt.wantErr {
 				assert.Error(t, err)
+				assert.Nil(t, vms)
 				return
 			}
 			assert.NoError(t, err)
@@ -172,8 +173,9 @@ func TestConfig_ResolveVM(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, err := cfg.ResolveVM("missing")
+		vm, err := cfg.ResolveVM("missing")
 		assert.Error(t, err)
+		assert.Nil(t, vm)
 	})
 }
 
