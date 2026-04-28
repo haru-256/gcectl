@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
-	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -24,7 +24,7 @@ Example:
 	Run: func(cmd *cobra.Command, args []string) {
 		// 依存性の注入
 		console := presenter.NewConsolePresenter()
-		cfg, err := cli.LoadConfig(CnfPath)
+		cfg, err := config.NewConfig(CnfPath)
 		if err != nil {
 			console.Error(fmt.Sprintf("%v\n", err))
 			os.Exit(1)

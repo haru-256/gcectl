@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
-	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -38,7 +38,13 @@ Example:
 			os.Exit(1)
 		}
 
-		vm, err := cli.ResolveVMByName(cnfPath, vmName)
+		cfg, err := config.NewConfig(cnfPath)
+		if err != nil {
+			console.Error(fmt.Sprintf("%v\n", err))
+			os.Exit(1)
+		}
+
+		vm, err := cfg.ResolveVM(vmName)
 		if err != nil {
 			console.Error(fmt.Sprintf("%v\n", err))
 			os.Exit(1)

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/haru-256/gcectl/internal/domain/model" // ドメインモデルをインポート
@@ -32,7 +33,7 @@ type yamlVM struct {
 	Zone    string `yaml:"zone"`
 }
 
-// ParseConfig reads a YAML configuration file and converts it to a Config structure.
+// NewConfig reads a YAML configuration file and converts it to a Config structure.
 //
 // This function performs the following steps:
 // 1. Reads the YAML file from the specified path
@@ -46,39 +47,23 @@ type yamlVM struct {
 // Returns:
 //   - *Config: The parsed configuration with domain model VMs
 //   - error: An error if file reading or YAML parsing fails
-//
-// Example config.yaml:
-//
-//	default-project: my-project
-//	default-zone: us-central1-a
-//	vm:
-//	  - name: vm1
-//	    project: custom-project  # optional, uses default if omitted
-//	    zone: us-west1-a         # optional, uses default if omitted
-//	  - name: vm2                # will use default-project and default-zone
-func ParseConfig(confPath string) (*Config, error) {
+func NewConfig(confPath string) (*Config, error) {
 	data, err := os.ReadFile(confPath)
 	if err != nil {
-		// log パッケージは main や cmd など上位の層で利用するためここでは返却に留める
-		return nil, err
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	// まずYAMLの構造を yamlConfig にデコードする
 	var ymlCnf yamlConfig
 	if unmarshalErr := yaml.Unmarshal(data, &ymlCnf); unmarshalErr != nil {
-		return nil, unmarshalErr
+		return nil, fmt.Errorf("failed to parse config YAML: %w", unmarshalErr)
 	}
 
-	// アプリケーションで利用する Config 構造体を作成
 	cnf := &Config{
 		DefaultProject: ymlCnf.DefaultProject,
 		DefaultZone:    ymlCnf.DefaultZone,
 	}
 
-	// yamlVM のスライスから、ドメインモデルである model.VM のスライスへ変換する
-	// このマッピング処理が、インフラ層の詳細とドメイン層を分離する重要な役割を果たします。
 	for _, ymlVm := range ymlCnf.VMs {
-		// VMごとのプロジェクトとゾーンが未指定の場合、デフォルト値を引き継ぐ
 		project := ymlVm.Project
 		if project == "" {
 			project = ymlCnf.DefaultProject
@@ -92,8 +77,6 @@ func ParseConfig(confPath string) (*Config, error) {
 			Name:    ymlVm.Name,
 			Project: project,
 			Zone:    zone,
-			// 他のフィールド (MachineType, Statusなど) は、
-			// ユースケース層がリポジトリ経由で取得するため、ここでは初期化しない
 		}
 		cnf.VMs = append(cnf.VMs, vm)
 	}
@@ -101,28 +84,35 @@ func ParseConfig(confPath string) (*Config, error) {
 	return cnf, nil
 }
 
-// GetVMByName searches for a VM with the specified name in the configuration.
-//
-// This method searches through the configured VMs and returns the first VM
-// that matches the given name. The comparison is case-sensitive.
-//
-// Parameters:
-//   - name: The name of the VM to search for
-//
-// Returns:
-//   - *model.VM: The VM with the matching name, or nil if not found
-//
-// Example:
-//
-//	vm := config.GetVMByName("my-vm")
-//	if vm == nil {
-//	    log.Fatal("VM not found")
-//	}
-func (c *Config) GetVMByName(name string) *model.VM {
+// getVMByName searches for a VM with the specified name in the configuration.
+func (c *Config) getVMByName(name string) *model.VM {
 	for _, vm := range c.VMs {
 		if vm.Name == name {
 			return vm
 		}
 	}
 	return nil
+}
+
+// ResolveVMs returns VM domain models matching the given names.
+// It maintains the order of names requested.
+func (c *Config) ResolveVMs(names []string) ([]*model.VM, error) {
+	vms := make([]*model.VM, 0, len(names))
+	for _, name := range names {
+		vm := c.getVMByName(name)
+		if vm == nil {
+			return nil, fmt.Errorf("VM %s not found in config", name)
+		}
+		vms = append(vms, vm)
+	}
+	return vms, nil
+}
+
+// ResolveVM returns a single VM domain model matching the given name.
+func (c *Config) ResolveVM(name string) (*model.VM, error) {
+	vm := c.getVMByName(name)
+	if vm == nil {
+		return nil, fmt.Errorf("VM %s not found in config", name)
+	}
+	return vm, nil
 }

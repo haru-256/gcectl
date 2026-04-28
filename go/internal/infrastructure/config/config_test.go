@@ -101,14 +101,14 @@ invalid yaml syntax: [
 				}
 			}
 
-			cfg, err := ParseConfig(confPath)
+			cfg, err := NewConfig(confPath)
 
 			if tt.wantErr {
-				assert.Error(t, err, "ParseConfig() should return an error")
+				assert.Error(t, err, "NewConfig() should return an error")
 				return
 			}
 
-			assert.NoError(t, err, "ParseConfig() should not return an error")
+			assert.NoError(t, err, "NewConfig() should not return an error")
 
 			if tt.validateFunc != nil {
 				tt.validateFunc(t, cfg)
@@ -117,7 +117,67 @@ invalid yaml syntax: [
 	}
 }
 
-func TestConfig_GetVMByName(t *testing.T) {
+func TestConfig_ResolveVMs(t *testing.T) {
+	cfg := &Config{
+		VMs: []*model.VM{
+			{Name: "vm1", Project: "p1", Zone: "z1"},
+			{Name: "vm2", Project: "p2", Zone: "z2"},
+		},
+	}
+
+	tests := []struct {
+		name    string
+		vmNames []string
+		wantErr bool
+	}{
+		{
+			name:    "success: resolve multiple VMs",
+			vmNames: []string{"vm2", "vm1"},
+			wantErr: false,
+		},
+		{
+			name:    "error: one VM missing",
+			vmNames: []string{"vm1", "missing"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vms, err := cfg.ResolveVMs(tt.vmNames)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Len(t, vms, len(tt.vmNames))
+			for i, name := range tt.vmNames {
+				assert.Equal(t, name, vms[i].Name)
+			}
+		})
+	}
+}
+
+func TestConfig_ResolveVM(t *testing.T) {
+	cfg := &Config{
+		VMs: []*model.VM{
+			{Name: "vm1", Project: "p1", Zone: "z1"},
+		},
+	}
+
+	t.Run("success", func(t *testing.T) {
+		vm, err := cfg.ResolveVM("vm1")
+		assert.NoError(t, err)
+		assert.Equal(t, "vm1", vm.Name)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		_, err := cfg.ResolveVM("missing")
+		assert.Error(t, err)
+	})
+}
+
+func TestConfig_getVMByName(t *testing.T) {
 	cfg := &Config{
 		DefaultProject: "test-project",
 		DefaultZone:    "us-central1-a",
@@ -157,14 +217,14 @@ func TestConfig_GetVMByName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vm := cfg.GetVMByName(tt.vmName)
+			vm := cfg.getVMByName(tt.vmName)
 
 			if tt.wantNil {
-				assert.Nil(t, vm, "GetVMByName() should return nil")
+				assert.Nil(t, vm, "getVMByName() should return nil")
 				return
 			}
 
-			require.NotNil(t, vm, "GetVMByName() should not return nil")
+			require.NotNil(t, vm, "getVMByName() should not return nil")
 			assert.Equal(t, tt.wantVM.Name, vm.Name, "VM.Name should match")
 			assert.Equal(t, tt.wantVM.Project, vm.Project, "VM.Project should match")
 			assert.Equal(t, tt.wantVM.Zone, vm.Zone, "VM.Zone should match")

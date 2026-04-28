@@ -55,21 +55,21 @@ func (p *ConsolePresenter) Error(msg string) {
 	fmt.Println(p.errorStyle.Render("[ERROR] | ") + msg)
 }
 
-// ProgressStart prints a progress message without a newline.
+// progressStart prints a progress message without a newline.
 //
 // Parameters:
 //   - msg: The progress message to display
-func (p *ConsolePresenter) ProgressStart(msg string) {
+func (p *ConsolePresenter) progressStart(msg string) {
 	fmt.Print(msg)
 }
 
-// Progress prints a dot (.) without a newline for progress indication.
-func (p *ConsolePresenter) Progress() {
+// progress prints a dot (.) without a newline for progress indication.
+func (p *ConsolePresenter) progress() {
 	fmt.Print(".")
 }
 
-// ProgressDone prints a newline to complete a progress line.
-func (p *ConsolePresenter) ProgressDone() {
+// progressDone prints a newline to complete a progress line.
+func (p *ConsolePresenter) progressDone() {
 	fmt.Println()
 }
 
@@ -247,8 +247,8 @@ func getItemPaddings(listItemsHeader []string) []string {
 // Returns:
 //   - error: Error from the executed function, or nil on success
 func (p *ConsolePresenter) ExecuteWithProgress(ctx context.Context, message string, fn func(context.Context) error) error {
-	p.ProgressStart(message)
-	defer p.ProgressDone()
+	p.progressStart(message)
+	defer p.progressDone()
 
 	eg, ctx := errgroup.WithContext(ctx)
 	doneCh := make(chan struct{})
@@ -274,7 +274,7 @@ func (p *ConsolePresenter) ExecuteWithProgress(ctx context.Context, message stri
 			case <-doneCh:
 				return nil
 			case <-ticker.C:
-				p.Progress()
+				p.progress()
 			}
 		}
 	})
