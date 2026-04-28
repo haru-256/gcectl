@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
-	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -24,9 +24,9 @@ Example:
 	Run: func(cmd *cobra.Command, args []string) {
 		// 依存性の注入
 		console := presenter.NewConsolePresenter()
-		cfg, err := cli.LoadConfig(CnfPath)
+		cfg, err := config.NewConfig(CnfPath)
 		if err != nil {
-			console.Error(fmt.Sprintf("%v\n", err))
+			console.Error(err.Error())
 			os.Exit(1)
 		}
 
@@ -36,7 +36,7 @@ Example:
 
 		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to create VM repository: %v\n", err))
+			console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
 			os.Exit(1)
 		}
 		defer func() {
@@ -66,7 +66,7 @@ Example:
 			console.RenderVMList(presenterItems)
 		}
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to list some VMs: %v\n", err))
+			console.Error(fmt.Sprintf("Failed to list some VMs: %v", err))
 			os.Exit(1)
 		}
 	},

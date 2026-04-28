@@ -23,9 +23,10 @@ func getCnf(t *testing.T) (*config.Config, string) {
 	home, err := os.UserHomeDir()
 	require.NoError(t, err)
 	cnfPath := home + "/.config/gcectl/config.yaml"
-	cnf, err := config.ParseConfig(cnfPath)
+	cnf, err := config.NewConfig(cnfPath)
 	require.NoError(t, err)
 	require.NotNil(t, cnf)
+
 	require.NotEqual(t, "", cnf.DefaultProject)
 	require.NotEqual(t, "", cnf.DefaultZone)
 	require.GreaterOrEqual(t, len(cnf.VMs), 2)
@@ -33,7 +34,11 @@ func getCnf(t *testing.T) (*config.Config, string) {
 }
 
 func TestVMRepositoryImpl_FindByName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	cnf, _ := getCnf(t)
+
 	ctx := context.Background()
 	repo, err := gcp.NewVMRepository(ctx, logger)
 	require.NoError(t, err)

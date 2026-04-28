@@ -8,9 +8,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
-	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -34,9 +34,15 @@ func offRun(cmd *cobra.Command, args []string) {
 	vmNames := args
 	infraLog.DefaultLogger.Debugf("Turning off the instances %s", strings.Join(vmNames, ", "))
 
-	vms, err := cli.ResolveVMsByName(CnfPath, vmNames)
+	cfg, err := config.NewConfig(CnfPath)
 	if err != nil {
-		console.Error(fmt.Sprintf("%v\n", err))
+		console.Error(err.Error())
+		os.Exit(1)
+	}
+
+	vms, err := cfg.ResolveVMs(vmNames)
+	if err != nil {
+		console.Error(err.Error())
 		os.Exit(1)
 	}
 
@@ -47,7 +53,7 @@ func offRun(cmd *cobra.Command, args []string) {
 	// 依存性の注入
 	vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
 	if err != nil {
-		console.Error(fmt.Sprintf("Failed to create VM repository: %v\n", err))
+		console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
 		os.Exit(1)
 	}
 	defer func() {
@@ -61,11 +67,11 @@ func offRun(cmd *cobra.Command, args []string) {
 			return stopVMUseCase.Execute(ctx, vms)
 		})
 	if err != nil {
-		console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v\n", err))
+		console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v", err))
 		os.Exit(1)
 	}
 
-	console.Success(fmt.Sprintf("Turned off the instances: %v\n", strings.Join(vmNames, ", ")))
+	console.Success(fmt.Sprintf("Turned off the instances: %v", strings.Join(vmNames, ", ")))
 }
 
 func init() {

@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "monthly"
     groups:
+      major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
       minor-patch:
         patterns:
           - "*"
@@ -22,5 +27,18 @@ updates:
       - "terraform/modules/gce"
       - "terraform/modules/google_project_services"
       - "terraform/modules/tfstate_gcs_bucket"
+      - "terraform/environments/dev"
     schedule:
       interval: "monthly"
+    groups:
+      major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+      minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

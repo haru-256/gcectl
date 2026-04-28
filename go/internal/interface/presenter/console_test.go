@@ -66,7 +66,7 @@ func TestConsolePresenter_Error(t *testing.T) {
 	assert.Contains(t, output, "Test error message", "Output should contain the test message")
 }
 
-func TestConsolePresenter_Progress(t *testing.T) {
+func TestConsolePresenter_progress(t *testing.T) {
 	presenter := NewConsolePresenter()
 
 	// Capture stdout
@@ -75,7 +75,7 @@ func TestConsolePresenter_Progress(t *testing.T) {
 	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
-	presenter.Progress()
+	presenter.progress()
 
 	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
@@ -85,10 +85,10 @@ func TestConsolePresenter_Progress(t *testing.T) {
 	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	assert.Equal(t, ".", output, "Progress() should output a single dot")
+	assert.Equal(t, ".", output, "progress() should output a single dot")
 }
 
-func TestConsolePresenter_ProgressDone(t *testing.T) {
+func TestConsolePresenter_progressDone(t *testing.T) {
 	presenter := NewConsolePresenter()
 
 	// Capture stdout
@@ -97,7 +97,7 @@ func TestConsolePresenter_ProgressDone(t *testing.T) {
 	require.NoError(t, err, "Failed to create pipe")
 	os.Stdout = w
 
-	presenter.ProgressDone()
+	presenter.progressDone()
 
 	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
@@ -107,10 +107,10 @@ func TestConsolePresenter_ProgressDone(t *testing.T) {
 	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	assert.Equal(t, "\n", output, "ProgressDone() should output a newline")
+	assert.Equal(t, "\n", output, "progressDone() should output a newline")
 }
 
-func TestConsolePresenter_ProgressStart(t *testing.T) {
+func TestConsolePresenter_progressStart(t *testing.T) {
 	presenter := NewConsolePresenter()
 
 	// Capture stdout
@@ -120,7 +120,7 @@ func TestConsolePresenter_ProgressStart(t *testing.T) {
 	os.Stdout = w
 
 	message := "Starting VM test-vm"
-	presenter.ProgressStart(message)
+	presenter.progressStart(message)
 
 	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
@@ -130,7 +130,7 @@ func TestConsolePresenter_ProgressStart(t *testing.T) {
 	require.NoError(t, err, "Failed to copy output")
 	output := buf.String()
 
-	assert.Equal(t, message, output, "ProgressStart() should output the provided message")
+	assert.Equal(t, message, output, "progressStart() should output the provided message")
 }
 
 func TestConsolePresenter_ProgressSequence(t *testing.T) {
@@ -143,10 +143,10 @@ func TestConsolePresenter_ProgressSequence(t *testing.T) {
 	os.Stdout = w
 
 	// Simulate a sequence of progress updates
-	presenter.Progress()
-	presenter.Progress()
-	presenter.Progress()
-	presenter.ProgressDone()
+	presenter.progress()
+	presenter.progress()
+	presenter.progress()
+	presenter.progressDone()
 
 	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
@@ -169,10 +169,10 @@ func TestConsolePresenter_ProgressStartWithSequence(t *testing.T) {
 	os.Stdout = w
 
 	// Simulate a complete progress sequence with start message
-	presenter.ProgressStart("Starting VM test-vm")
-	presenter.Progress()
-	presenter.Progress()
-	presenter.ProgressDone()
+	presenter.progressStart("Starting VM test-vm")
+	presenter.progress()
+	presenter.progress()
+	presenter.progressDone()
 
 	require.NoError(t, w.Close(), "Failed to close write pipe")
 	os.Stdout = old
