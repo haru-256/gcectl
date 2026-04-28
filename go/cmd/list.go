@@ -30,15 +30,19 @@ Example:
 			os.Exit(1)
 		}
 
-		vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
+		// List VMs
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+
+		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
+		if err != nil {
+			console.Error(fmt.Sprintf("Failed to create VM repository: %v\n", err))
+			os.Exit(1)
+		}
 		defer func() {
 			_ = vmRepo.Close()
 		}()
 		listVMsUC := usecase.NewListVMsUseCase(vmRepo)
-
-		// List VMs
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
 
 		items, err := listVMsUC.Execute(ctx, cfg.VMs)
 		infraLog.DefaultLogger.Debugf("Found %d VMs", len(items))

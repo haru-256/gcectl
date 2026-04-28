@@ -44,14 +44,18 @@ Example:
 			os.Exit(1)
 		}
 
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+
 		// 依存性の注入
-		vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
+		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
+		if err != nil {
+			console.Error(fmt.Sprintf("Failed to create VM repository: %v\n", err))
+			os.Exit(1)
+		}
 		defer func() {
 			_ = vmRepo.Close()
 		}()
-
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
 
 		if unset {
 			infraLog.DefaultLogger.Debugf("Unset schedule-policy")

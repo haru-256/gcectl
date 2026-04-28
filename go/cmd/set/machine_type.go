@@ -44,15 +44,19 @@ Example:
 			os.Exit(1)
 		}
 
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+
 		// 依存性の注入
-		vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
+		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
+		if err != nil {
+			console.Error(fmt.Sprintf("Failed to create VM repository: %v\n", err))
+			os.Exit(1)
+		}
 		defer func() {
 			_ = vmRepo.Close()
 		}()
 		updateMachineTypeUseCase := usecase.NewUpdateMachineTypeUseCase(vmRepo, infraLog.DefaultLogger)
-
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
 
 		message := fmt.Sprintf("Updating machine type for VM %s", vmName)
 		err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {

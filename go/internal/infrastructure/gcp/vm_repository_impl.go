@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	compute "cloud.google.com/go/compute/apiv1"
@@ -18,62 +17,19 @@ import (
 	"github.com/haru-256/gcectl/internal/infrastructure/log"
 )
 
+type instancesClient interface {
+	Get(context.Context, *computepb.GetInstanceRequest, ...gax.CallOption) (*computepb.Instance, error)
+	Start(context.Context, *computepb.StartInstanceRequest, ...gax.CallOption) (*compute.Operation, error)
+	Stop(context.Context, *computepb.StopInstanceRequest, ...gax.CallOption) (*compute.Operation, error)
+	AddResourcePolicies(context.Context, *computepb.AddResourcePoliciesInstanceRequest, ...gax.CallOption) (*compute.Operation, error)
+	RemoveResourcePolicies(context.Context, *computepb.RemoveResourcePoliciesInstanceRequest, ...gax.CallOption) (*compute.Operation, error)
+	SetMachineType(context.Context, *computepb.SetMachineTypeInstanceRequest, ...gax.CallOption) (*compute.Operation, error)
+	Close() error
+}
+
 type resourcePoliciesClient interface {
 	Get(context.Context, *computepb.GetResourcePolicyRequest, ...gax.CallOption) (*computepb.ResourcePolicy, error)
 	Close() error
-}
-
-// resourcePoliciesClientProvider provides a shared ResourcePolicies client.
-type resourcePoliciesClientProvider interface {
-	Get(context.Context) (resourcePoliciesClient, error)
-	Close() error
-}
-
-// lazyResourcePoliciesClientProvider initializes and caches the client on first use.
-//
-//nolint:govet // Field order optimized for readability over memory alignment
-type lazyResourcePoliciesClientProvider struct {
-	mu        sync.Mutex
-	client    resourcePoliciesClient
-	newClient func(context.Context) (resourcePoliciesClient, error)
-	closed    bool
-}
-
-// newLazyResourcePoliciesClientProvider creates a provider with lazy client initialization.
-func newLazyResourcePoliciesClientProvider(newClient func(context.Context) (resourcePoliciesClient, error)) *lazyResourcePoliciesClientProvider {
-	return &lazyResourcePoliciesClientProvider{
-		newClient: newClient,
-	}
-}
-
-func (p *lazyResourcePoliciesClientProvider) Get(ctx context.Context) (resourcePoliciesClient, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if p.closed {
-		return nil, errors.New("resource policies client provider is closed")
-	}
-	if p.client != nil {
-		return p.client, nil
-	}
-
-	client, err := p.newClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-	p.client = client
-	return p.client, nil
-}
-
-func (p *lazyResourcePoliciesClientProvider) Close() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.closed = true
-	if p.client == nil {
-		return nil
-	}
-	return p.client.Close()
 }
 
 // VMRepository implements the repository.VMRepository interface for GCP.
@@ -82,83 +38,60 @@ func (p *lazyResourcePoliciesClientProvider) Close() error {
 type VMRepository struct {
 	logger log.Logger
 
-	policyClientProvider resourcePoliciesClientProvider
+	instancesClient        instancesClient
+	resourcePoliciesClient resourcePoliciesClient
 }
 
-// NewVMRepository creates a new VMRepository instance.
-//
-// Parameters:
-//   - logger: Logger instance for logging
-//
-// Returns:
-//   - *VMRepository: A new repository instance
-func NewVMRepository(logger log.Logger) *VMRepository {
-	return newVMRepository(
-		logger,
-		newLazyResourcePoliciesClientProvider(func(ctx context.Context) (resourcePoliciesClient, error) {
-			return compute.NewResourcePoliciesRESTClient(ctx)
-		}),
-	)
+// NewVMRepository creates a VMRepository with GCP clients initialized from ctx.
+// The returned repository owns the clients and must be closed by the caller.
+func NewVMRepository(ctx context.Context, logger log.Logger) (*VMRepository, error) {
+	instancesClient, err := compute.NewInstancesRESTClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Instances client: %w", err)
+	}
+
+	resourcePoliciesClient, err := compute.NewResourcePoliciesRESTClient(ctx)
+	if err != nil {
+		if closeErr := instancesClient.Close(); closeErr != nil {
+			logger.Errorf("Failed to close Instances client after ResourcePolicies client creation failed: %v", closeErr)
+		}
+		return nil, fmt.Errorf("failed to create ResourcePolicies client: %w", err)
+	}
+
+	return newVMRepository(logger, instancesClient, resourcePoliciesClient), nil
 }
 
-// newVMRepository allows tests to inject a policy client provider.
-func newVMRepository(logger log.Logger, policyClientProvider resourcePoliciesClientProvider) *VMRepository {
+// newVMRepository allows tests to inject GCP clients.
+func newVMRepository(logger log.Logger, instancesClient instancesClient, resourcePoliciesClient resourcePoliciesClient) *VMRepository {
 	return &VMRepository{
-		logger:               logger,
-		policyClientProvider: policyClientProvider,
+		logger:                 logger,
+		instancesClient:        instancesClient,
+		resourcePoliciesClient: resourcePoliciesClient,
 	}
 }
 
 // Close releases any resources held by the repository, including GCP clients.
 func (r *VMRepository) Close() error {
-	if err := r.policyClientProvider.Close(); err != nil {
-		r.logger.Errorf("Failed to close policy client: %v", err)
-		return err
+	var closeErrs []error
+	if err := r.instancesClient.Close(); err != nil {
+		r.logger.Errorf("Failed to close Instances client: %v", err)
+		closeErrs = append(closeErrs, err)
 	}
-	return nil
-}
-
-// getPolicyClient returns the shared ResourcePoliciesClient, creating it lazily on first use.
-//
-// The context passed here is used for client initialization only. Request-level
-// cancellation and deadlines still come from the context passed to each client
-// method, such as ResourcePoliciesClient.Get(ctx, req).
-//
-// Initialization is retryable: failures are returned to the caller without
-// being cached, so a later call with a fresh context can create the client.
-func (r *VMRepository) getPolicyClient(ctx context.Context) (resourcePoliciesClient, error) {
-	policyClient, err := r.policyClientProvider.Get(ctx)
-	if err != nil {
-		r.logger.Errorf("Failed to create ResourcePolicies client: %v", err)
-		return nil, err
+	if err := r.resourcePoliciesClient.Close(); err != nil {
+		r.logger.Errorf("Failed to close ResourcePolicies client: %v", err)
+		closeErrs = append(closeErrs, err)
 	}
-	return policyClient, nil
-}
-
-func (r *VMRepository) newInstancesClient(ctx context.Context) (*compute.InstancesClient, error) {
-	return compute.NewInstancesRESTClient(ctx)
-}
-
-func (r *VMRepository) closeInstancesClient(client *compute.InstancesClient) {
-	if closeErr := client.Close(); closeErr != nil {
-		r.logger.Errorf("Failed to close client: %v", closeErr)
-	}
+	return errors.Join(closeErrs...)
 }
 
 func (r *VMRepository) FindByName(ctx context.Context, vm *model.VM) (*model.VM, error) {
-	client, err := r.newInstancesClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create client: %w", err)
-	}
-	defer r.closeInstancesClient(client)
-
 	req := &computepb.GetInstanceRequest{
 		Project:  vm.Project,
 		Zone:     vm.Zone,
 		Instance: vm.Name,
 	}
 
-	instance, err := client.Get(ctx, req)
+	instance, err := r.instancesClient.Get(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get instance: %w", err)
 	}
@@ -167,19 +100,13 @@ func (r *VMRepository) FindByName(ctx context.Context, vm *model.VM) (*model.VM,
 }
 
 func (r *VMRepository) Start(ctx context.Context, vm *model.VM) error {
-	client, err := r.newInstancesClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer r.closeInstancesClient(client)
-
 	req := &computepb.StartInstanceRequest{
 		Project:  vm.Project,
 		Zone:     vm.Zone,
 		Instance: vm.Name,
 	}
 
-	op, err := client.Start(ctx, req)
+	op, err := r.instancesClient.Start(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to start instance: %w", err)
 	}
@@ -188,19 +115,13 @@ func (r *VMRepository) Start(ctx context.Context, vm *model.VM) error {
 }
 
 func (r *VMRepository) Stop(ctx context.Context, vm *model.VM) error {
-	client, err := r.newInstancesClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer r.closeInstancesClient(client)
-
 	req := &computepb.StopInstanceRequest{
 		Project:  vm.Project,
 		Zone:     vm.Zone,
 		Instance: vm.Name,
 	}
 
-	op, err := client.Stop(ctx, req)
+	op, err := r.instancesClient.Stop(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to stop instance: %w", err)
 	}
@@ -210,14 +131,6 @@ func (r *VMRepository) Stop(ctx context.Context, vm *model.VM) error {
 
 // SetSchedulePolicy attaches a schedule policy to a Google Compute Engine instance.
 func (r *VMRepository) SetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
-	// Create a new InstancesClient with authentication
-	client, err := r.newInstancesClient(ctx)
-	if err != nil {
-		r.logger.Errorf("failed to create Instances client: %v", err)
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer r.closeInstancesClient(client)
-
 	// Get instance details
 	req := &computepb.GetInstanceRequest{
 		Project:  vm.Project,
@@ -225,7 +138,7 @@ func (r *VMRepository) SetSchedulePolicy(ctx context.Context, vm *model.VM, poli
 		Instance: vm.Name,
 	}
 
-	instance, err := client.Get(ctx, req)
+	instance, err := r.instancesClient.Get(ctx, req)
 	if err != nil {
 		r.logger.Errorf("failed to get instance: %v", err)
 		return fmt.Errorf("failed to get instance: %w", err)
@@ -249,7 +162,7 @@ func (r *VMRepository) SetSchedulePolicy(ctx context.Context, vm *model.VM, poli
 		},
 	}
 
-	op, err := client.AddResourcePolicies(ctx, addPolicyReq)
+	op, err := r.instancesClient.AddResourcePolicies(ctx, addPolicyReq)
 	if err != nil {
 		r.logger.Errorf("Failed to set schedule policy: %v", err)
 		return fmt.Errorf("failed to add resource policy: %w", err)
@@ -267,14 +180,6 @@ func (r *VMRepository) SetSchedulePolicy(ctx context.Context, vm *model.VM, poli
 
 // UnsetSchedulePolicy removes a schedule policy from a Google Compute Engine instance.
 func (r *VMRepository) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, policyName string) error {
-	// Create a new InstancesClient with authentication
-	client, err := r.newInstancesClient(ctx)
-	if err != nil {
-		r.logger.Errorf("failed to create Instances client: %v", err)
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer r.closeInstancesClient(client)
-
 	// Get instance details
 	req := &computepb.GetInstanceRequest{
 		Project:  vm.Project,
@@ -282,7 +187,7 @@ func (r *VMRepository) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, po
 		Instance: vm.Name,
 	}
 
-	instance, err := client.Get(ctx, req)
+	instance, err := r.instancesClient.Get(ctx, req)
 	if err != nil {
 		r.logger.Errorf("failed to get instance: %v", err)
 		return fmt.Errorf("failed to get instance: %w", err)
@@ -306,7 +211,7 @@ func (r *VMRepository) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, po
 		},
 	}
 
-	op, err := client.RemoveResourcePolicies(ctx, removePolicyReq)
+	op, err := r.instancesClient.RemoveResourcePolicies(ctx, removePolicyReq)
 	if err != nil {
 		r.logger.Errorf("Failed to unset schedule policy: %v", err)
 		return fmt.Errorf("failed to remove resource policy: %w", err)
@@ -324,14 +229,6 @@ func (r *VMRepository) UnsetSchedulePolicy(ctx context.Context, vm *model.VM, po
 
 // UpdateMachineType changes the machine type of a VM instance.
 func (r *VMRepository) UpdateMachineType(ctx context.Context, vm *model.VM, machineType string) error {
-	// Create a new InstancesClient with authentication
-	client, err := r.newInstancesClient(ctx)
-	if err != nil {
-		r.logger.Errorf("failed to create Instances client: %v", err)
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer r.closeInstancesClient(client)
-
 	// Machine type must be in the format: zones/ZONE/machineTypes/MACHINE_TYPE
 	machineTypeURL := fmt.Sprintf("zones/%s/machineTypes/%s", vm.Zone, machineType)
 
@@ -344,7 +241,7 @@ func (r *VMRepository) UpdateMachineType(ctx context.Context, vm *model.VM, mach
 		},
 	}
 
-	op, err := client.SetMachineType(ctx, setMachineTypeReq)
+	op, err := r.instancesClient.SetMachineType(ctx, setMachineTypeReq)
 	if err != nil {
 		r.logger.Errorf("Failed to set machine type: %v", err)
 		return fmt.Errorf("failed to set machine type: %w", err)
@@ -405,11 +302,6 @@ func (r *VMRepository) getSchedulePolicy(ctx context.Context, instance *computep
 		return "", nil
 	}
 
-	policyClient, err := r.getPolicyClient(ctx)
-	if err != nil {
-		return "", err
-	}
-
 	project, err := extractProject(instance.GetSelfLink())
 	if err != nil {
 		r.logger.Errorf("Failed to get project from instance: %v", err)
@@ -436,7 +328,7 @@ func (r *VMRepository) getSchedulePolicy(ctx context.Context, instance *computep
 		}
 
 		var resourcePolicy *computepb.ResourcePolicy
-		resourcePolicy, err = policyClient.Get(ctx, policyReq)
+		resourcePolicy, err = r.resourcePoliciesClient.Get(ctx, policyReq)
 		if err != nil {
 			r.logger.Errorf("Failed to get resource policy details: %v", err)
 			continue
