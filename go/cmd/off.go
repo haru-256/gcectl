@@ -40,13 +40,20 @@ func offRun(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// 依存性の注入
-	vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
-	stopVMUseCase := usecase.NewStopVMUseCase(vmRepo, infraLog.DefaultLogger)
-
 	// Turn off the instances
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// 依存性の注入
+	vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
+	if err != nil {
+		console.Error(fmt.Sprintf("Failed to create VM repository: %v\n", err))
+		os.Exit(1)
+	}
+	defer func() {
+		_ = vmRepo.Close()
+	}()
+	stopVMUseCase := usecase.NewStopVMUseCase(vmRepo, infraLog.DefaultLogger)
 
 	err = console.ExecuteWithProgress(ctx,
 		fmt.Sprintf("Stopping VMs %s", strings.Join(vmNames, ", ")),

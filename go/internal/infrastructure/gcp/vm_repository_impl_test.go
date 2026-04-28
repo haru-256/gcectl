@@ -34,8 +34,12 @@ func getCnf(t *testing.T) (*config.Config, string) {
 
 func TestVMRepositoryImpl_FindByName(t *testing.T) {
 	cnf, _ := getCnf(t)
-	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
+	repo, err := gcp.NewVMRepository(ctx, logger)
+	require.NoError(t, err)
+	defer func() {
+		_ = repo.Close()
+	}()
 
 	tests := []struct {
 		name      string
@@ -64,12 +68,12 @@ func TestVMRepositoryImpl_FindByName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			foundVM, err := repo.FindByName(ctx, tt.vm)
+			foundVM, findErr := repo.FindByName(ctx, tt.vm)
 			if tt.expectErr {
-				require.Error(t, err)
+				require.Error(t, findErr)
 				require.Nil(t, foundVM)
 			} else {
-				require.NoError(t, err)
+				require.NoError(t, findErr)
 				require.NotNil(t, foundVM)
 				require.Equal(t, tt.vm.Project, foundVM.Project)
 				require.Equal(t, tt.vm.Zone, foundVM.Zone)
@@ -88,8 +92,12 @@ func TestVMRepositoryImpl_StartStop(t *testing.T) {
 	}
 
 	cnf, _ := getCnf(t)
-	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
+	repo, err := gcp.NewVMRepository(ctx, logger)
+	require.NoError(t, err)
+	defer func() {
+		_ = repo.Close()
+	}()
 
 	// Use the first configured VM for testing
 	testVM := &model.VM{
@@ -169,8 +177,12 @@ func TestVMRepositoryImpl_UpdateMachineType(t *testing.T) {
 	}
 
 	cnf, _ := getCnf(t)
-	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
+	repo, err := gcp.NewVMRepository(ctx, logger)
+	require.NoError(t, err)
+	defer func() {
+		_ = repo.Close()
+	}()
 
 	// Use the first configured VM for testing
 	testVM := &model.VM{
@@ -249,8 +261,12 @@ func TestVMRepositoryImpl_SchedulePolicy(t *testing.T) {
 	}
 
 	cnf, _ := getCnf(t)
-	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
+	repo, err := gcp.NewVMRepository(ctx, logger)
+	require.NoError(t, err)
+	defer func() {
+		_ = repo.Close()
+	}()
 
 	// Use the first configured VM for testing
 	testVM := &model.VM{
