@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -38,18 +38,9 @@ Example:
 			os.Exit(1)
 		}
 
-		// parse config
-		cnf, err := config.ParseConfig(cnfPath)
+		vm, err := cli.ResolveVMByName(cnfPath, vmName)
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to parse config: %v\n", err))
-			os.Exit(1)
-		}
-		infraLog.DefaultLogger.Debugf(fmt.Sprintf("Config: %+v", cnf))
-
-		// filter VM by name
-		vm := cnf.GetVMByName(vmName)
-		if vm == nil {
-			console.Error(fmt.Sprintf("VM %s not found", vmName))
+			console.Error(fmt.Sprintf("%v\n", err))
 			os.Exit(1)
 		}
 
