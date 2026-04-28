@@ -43,7 +43,9 @@ Example:
 
 		// 依存性の注入
 		vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
-		defer vmRepo.Close()
+		defer func() {
+			_ = vmRepo.Close()
+		}()
 		describeVMUseCase := usecase.NewDescribeVMUseCase(vmRepo)
 
 		// Describe the instance

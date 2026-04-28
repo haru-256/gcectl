@@ -23,7 +23,58 @@ type resourcePoliciesClient interface {
 	Close() error
 }
 
-type newResourcePoliciesClientFunc func(context.Context) (resourcePoliciesClient, error)
+// resourcePoliciesClientProvider provides a shared ResourcePolicies client.
+type resourcePoliciesClientProvider interface {
+	Get(context.Context) (resourcePoliciesClient, error)
+	Close() error
+}
+
+// lazyResourcePoliciesClientProvider initializes and caches the client on first use.
+//
+//nolint:govet // Field order optimized for readability over memory alignment
+type lazyResourcePoliciesClientProvider struct {
+	mu        sync.Mutex
+	client    resourcePoliciesClient
+	newClient func(context.Context) (resourcePoliciesClient, error)
+	closed    bool
+}
+
+// newLazyResourcePoliciesClientProvider creates a provider with lazy client initialization.
+func newLazyResourcePoliciesClientProvider(newClient func(context.Context) (resourcePoliciesClient, error)) *lazyResourcePoliciesClientProvider {
+	return &lazyResourcePoliciesClientProvider{
+		newClient: newClient,
+	}
+}
+
+func (p *lazyResourcePoliciesClientProvider) Get(ctx context.Context) (resourcePoliciesClient, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		return nil, errors.New("resource policies client provider is closed")
+	}
+	if p.client != nil {
+		return p.client, nil
+	}
+
+	client, err := p.newClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	p.client = client
+	return p.client, nil
+}
+
+func (p *lazyResourcePoliciesClientProvider) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.closed = true
+	if p.client == nil {
+		return nil
+	}
+	return p.client.Close()
+}
 
 // VMRepository implements the repository.VMRepository interface for GCP.
 //
@@ -31,10 +82,7 @@ type newResourcePoliciesClientFunc func(context.Context) (resourcePoliciesClient
 type VMRepository struct {
 	logger log.Logger
 
-	policyClientMu            sync.Mutex
-	policyClient              resourcePoliciesClient
-	newResourcePoliciesClient newResourcePoliciesClientFunc
-	closed                    bool
+	policyClientProvider resourcePoliciesClientProvider
 }
 
 // NewVMRepository creates a new VMRepository instance.
@@ -45,23 +93,29 @@ type VMRepository struct {
 // Returns:
 //   - *VMRepository: A new repository instance
 func NewVMRepository(logger log.Logger) *VMRepository {
+	return newVMRepository(
+		logger,
+		newLazyResourcePoliciesClientProvider(func(ctx context.Context) (resourcePoliciesClient, error) {
+			return compute.NewResourcePoliciesRESTClient(ctx)
+		}),
+	)
+}
+
+// newVMRepository allows tests to inject a policy client provider.
+func newVMRepository(logger log.Logger, policyClientProvider resourcePoliciesClientProvider) *VMRepository {
 	return &VMRepository{
-		logger:                    logger,
-		newResourcePoliciesClient: defaultNewResourcePoliciesClient,
+		logger:               logger,
+		policyClientProvider: policyClientProvider,
 	}
 }
 
 // Close releases any resources held by the repository, including GCP clients.
-func (r *VMRepository) Close() {
-	r.policyClientMu.Lock()
-	defer r.policyClientMu.Unlock()
-
-	r.closed = true
-	if r.policyClient != nil {
-		if err := r.policyClient.Close(); err != nil {
-			r.logger.Errorf("Failed to close policy client: %v", err)
-		}
+func (r *VMRepository) Close() error {
+	if err := r.policyClientProvider.Close(); err != nil {
+		r.logger.Errorf("Failed to close policy client: %v", err)
+		return err
 	}
+	return nil
 }
 
 // getPolicyClient returns the shared ResourcePoliciesClient, creating it lazily on first use.
@@ -73,27 +127,12 @@ func (r *VMRepository) Close() {
 // Initialization is retryable: failures are returned to the caller without
 // being cached, so a later call with a fresh context can create the client.
 func (r *VMRepository) getPolicyClient(ctx context.Context) (resourcePoliciesClient, error) {
-	r.policyClientMu.Lock()
-	defer r.policyClientMu.Unlock()
-
-	if r.closed {
-		return nil, errors.New("VMRepository is closed")
-	}
-	if r.policyClient != nil {
-		return r.policyClient, nil
-	}
-
-	policyClient, err := r.newResourcePoliciesClient(ctx)
+	policyClient, err := r.policyClientProvider.Get(ctx)
 	if err != nil {
 		r.logger.Errorf("Failed to create ResourcePolicies client: %v", err)
 		return nil, err
 	}
-	r.policyClient = policyClient
-	return r.policyClient, nil
-}
-
-func defaultNewResourcePoliciesClient(ctx context.Context) (resourcePoliciesClient, error) {
-	return compute.NewResourcePoliciesRESTClient(ctx)
+	return policyClient, nil
 }
 
 func (r *VMRepository) newInstancesClient(ctx context.Context) (*compute.InstancesClient, error) {

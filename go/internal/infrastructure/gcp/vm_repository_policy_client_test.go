@@ -24,26 +24,92 @@ func (c *fakeResourcePoliciesClient) Close() error {
 	return nil
 }
 
-func TestVMRepository_getPolicyClientRetriesAfterInitializationFailure(t *testing.T) {
-	repo := NewVMRepository(log.NewLogger())
+func TestLazyResourcePoliciesClientProviderRetriesAfterInitializationFailure(t *testing.T) {
 	firstErr := errors.New("transient init failure")
 	successClient := &fakeResourcePoliciesClient{}
 	attempts := 0
 
-	repo.newResourcePoliciesClient = func(context.Context) (resourcePoliciesClient, error) {
+	provider := newLazyResourcePoliciesClientProvider(func(context.Context) (resourcePoliciesClient, error) {
 		attempts++
 		if attempts == 1 {
 			return nil, firstErr
 		}
 		return successClient, nil
-	}
+	})
 
-	client, err := repo.getPolicyClient(context.Background())
+	client, err := provider.Get(context.Background())
 	require.ErrorIs(t, err, firstErr)
 	require.Nil(t, client)
 
-	client, err = repo.getPolicyClient(context.Background())
+	client, err = provider.Get(context.Background())
 	require.NoError(t, err)
 	require.Same(t, successClient, client)
 	require.Equal(t, 2, attempts)
+}
+
+func TestLazyResourcePoliciesClientProviderReusesInitializedClient(t *testing.T) {
+	successClient := &fakeResourcePoliciesClient{}
+	attempts := 0
+	provider := newLazyResourcePoliciesClientProvider(func(context.Context) (resourcePoliciesClient, error) {
+		attempts++
+		return successClient, nil
+	})
+
+	firstClient, err := provider.Get(context.Background())
+	require.NoError(t, err)
+	secondClient, err := provider.Get(context.Background())
+	require.NoError(t, err)
+
+	require.Same(t, successClient, firstClient)
+	require.Same(t, successClient, secondClient)
+	require.Equal(t, 1, attempts)
+}
+
+func TestLazyResourcePoliciesClientProviderCloseClosesInitializedClient(t *testing.T) {
+	successClient := &fakeResourcePoliciesClient{}
+	provider := newLazyResourcePoliciesClientProvider(func(context.Context) (resourcePoliciesClient, error) {
+		return successClient, nil
+	})
+
+	client, err := provider.Get(context.Background())
+	require.NoError(t, err)
+	require.Same(t, successClient, client)
+
+	require.NoError(t, provider.Close())
+	require.True(t, successClient.closed)
+}
+
+func TestLazyResourcePoliciesClientProviderGetAfterCloseReturnsError(t *testing.T) {
+	provider := newLazyResourcePoliciesClientProvider(func(context.Context) (resourcePoliciesClient, error) {
+		return &fakeResourcePoliciesClient{}, nil
+	})
+
+	require.NoError(t, provider.Close())
+
+	client, err := provider.Get(context.Background())
+	require.Error(t, err)
+	require.EqualError(t, err, "resource policies client provider is closed")
+	require.Nil(t, client)
+}
+
+type fakeResourcePoliciesClientProvider struct {
+	client resourcePoliciesClient
+}
+
+func (p *fakeResourcePoliciesClientProvider) Get(context.Context) (resourcePoliciesClient, error) {
+	return p.client, nil
+}
+
+func (p *fakeResourcePoliciesClientProvider) Close() error {
+	return nil
+}
+
+func TestVMRepositoryGetPolicyClientUsesInjectedProvider(t *testing.T) {
+	successClient := &fakeResourcePoliciesClient{}
+	provider := &fakeResourcePoliciesClientProvider{client: successClient}
+	repo := newVMRepository(log.NewLogger(), provider)
+
+	client, err := repo.getPolicyClient(context.Background())
+	require.NoError(t, err)
+	require.Same(t, successClient, client)
 }

@@ -31,7 +31,9 @@ Example:
 		}
 
 		vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
-		defer vmRepo.Close()
+		defer func() {
+			_ = vmRepo.Close()
+		}()
 		listVMsUC := usecase.NewListVMsUseCase(vmRepo)
 
 		// List VMs

@@ -42,7 +42,9 @@ func onRun(cmd *cobra.Command, args []string) {
 
 	// 依存性の注入
 	vmRepo := gcp.NewVMRepository(infraLog.DefaultLogger)
-	defer vmRepo.Close()
+	defer func() {
+		_ = vmRepo.Close()
+	}()
 	startVMUseCase := usecase.NewStartVMUseCase(vmRepo, infraLog.DefaultLogger)
 
 	// Turn on the instances
