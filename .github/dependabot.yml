@@ -4,6 +4,13 @@ updates:
     directory: "go/"
     schedule:
       interval: "monthly"
+    groups:
+      minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
