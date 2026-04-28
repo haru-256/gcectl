@@ -33,8 +33,8 @@ func getCnf(t *testing.T) (*config.Config, string) {
 }
 
 func TestVMRepositoryImpl_FindByName(t *testing.T) {
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
+	cnf, _ := getCnf(t)
+	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -82,39 +82,13 @@ func TestVMRepositoryImpl_FindByName(t *testing.T) {
 	}
 }
 
-func TestVMRepositoryImpl_FindAll(t *testing.T) {
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
-	ctx := context.Background()
-
-	vms, err := repo.FindAll(ctx)
-	require.NoError(t, err)
-	require.NotNil(t, vms)
-	require.GreaterOrEqual(t, len(vms), len(cnf.VMs), "Should find at least the configured VMs")
-
-	// Verify that all configured VMs are found
-	for _, configVM := range cnf.VMs {
-		found := false
-		for _, vm := range vms {
-			if vm.Project == configVM.Project && vm.Zone == configVM.Zone && vm.Name == configVM.Name {
-				found = true
-				// Verify required fields are populated
-				assert.NotEmpty(t, vm.MachineType)
-				assert.NotEqual(t, model.StatusUnknown, vm.Status)
-				break
-			}
-		}
-		assert.True(t, found, "Configured VM %s/%s/%s should be found", configVM.Project, configVM.Zone, configVM.Name)
-	}
-}
-
 func TestVMRepositoryImpl_StartStop(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long-running integration test in short mode")
 	}
 
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
+	cnf, _ := getCnf(t)
+	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
 
 	// Use the first configured VM for testing
@@ -194,8 +168,8 @@ func TestVMRepositoryImpl_UpdateMachineType(t *testing.T) {
 		t.Skip("Skipping long-running integration test in short mode")
 	}
 
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
+	cnf, _ := getCnf(t)
+	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
 
 	// Use the first configured VM for testing
@@ -274,8 +248,8 @@ func TestVMRepositoryImpl_SchedulePolicy(t *testing.T) {
 		t.Skip("Skipping long-running integration test in short mode")
 	}
 
-	cnf, cnfPath := getCnf(t)
-	repo := gcp.NewVMRepository(cnfPath, logger)
+	cnf, _ := getCnf(t)
+	repo := gcp.NewVMRepository(logger)
 	ctx := context.Background()
 
 	// Use the first configured VM for testing
