@@ -2,13 +2,24 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/haru-256/gcectl/internal/domain/model"
 	"github.com/haru-256/gcectl/internal/domain/repository"
 )
 
-// DescribeVM retrieves detailed information about a specific VM and returns it with a calculated uptime string.
+// DescribeVMUseCase retrieves detailed information about a specific VM.
+type DescribeVMUseCase struct {
+	repo repository.VMRepository
+}
+
+// NewDescribeVMUseCase creates a new DescribeVMUseCase instance.
+func NewDescribeVMUseCase(repo repository.VMRepository) *DescribeVMUseCase {
+	return &DescribeVMUseCase{repo: repo}
+}
+
+// Execute retrieves detailed information about a specific VM and returns it with a calculated uptime string.
 //
 // This use case encapsulates the business logic of fetching a VM and calculating its uptime,
 // keeping this logic out of the presentation layer. The uptime is returned as a formatted string
@@ -16,7 +27,6 @@ import (
 //
 // Parameters:
 //   - ctx: Context for cancellation and timeout control
-//   - repo: VM repository interface for data access
 //   - project: GCP project ID
 //   - zone: GCP zone
 //   - name: VM instance name
@@ -28,21 +38,25 @@ import (
 //
 // Example:
 //
-//	vm, uptime, err := DescribeVM(ctx, repo, "my-project", "us-central1-a", "my-vm")
+//	useCase := NewDescribeVMUseCase(repo)
+//	vm, uptime, err := useCase.Execute(ctx, "my-project", "us-central1-a", "my-vm")
 //	if err != nil {
 //	    return err
 //	}
 //	// vm: &model.VM{Name: "my-vm", Status: model.StatusRunning, ...}
 //	// uptime: "2h30m15s"
-func DescribeVM(ctx context.Context, repo repository.VMRepository, project, zone, name string) (*model.VM, string, error) {
+func (u *DescribeVMUseCase) Execute(ctx context.Context, project, zone, name string) (*model.VM, string, error) {
 	vm := &model.VM{
 		Project: project,
 		Zone:    zone,
 		Name:    name,
 	}
-	foundVM, err := repo.FindByName(ctx, vm)
+	foundVM, err := u.repo.FindByName(ctx, vm)
 	if err != nil {
 		return nil, "", err
+	}
+	if foundVM == nil {
+		return nil, "", fmt.Errorf("VM %s: not found", name)
 	}
 
 	// Calculate uptime using shared logic

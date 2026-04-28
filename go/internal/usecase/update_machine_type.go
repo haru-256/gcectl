@@ -60,9 +60,12 @@ func (uc *UpdateMachineTypeUseCase) Execute(ctx context.Context, project, zone, 
 	if err != nil {
 		return fmt.Errorf("failed to find VM: %w", err)
 	}
+	if foundVM == nil {
+		return fmt.Errorf("VM %s: not found", name)
+	}
 
 	// 2. ビジネスルールチェック（VMは停止状態である必要がある）
-	if foundVM.CanStop() {
+	if !foundVM.CanChangeMachineType() {
 		return fmt.Errorf("VM %s must be stopped before changing machine type (current status: %s)", foundVM.Name, foundVM.Status)
 	}
 
