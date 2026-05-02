@@ -6,7 +6,7 @@ go 1.25.0
 tool go.uber.org/mock/mockgen
 
 require (
-	cloud.google.com/go/compute v1.60.0
+	cloud.google.com/go/compute v1.61.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/googleapis/gax-go/v2 v2.22.0
