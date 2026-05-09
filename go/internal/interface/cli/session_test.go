@@ -60,10 +60,30 @@ func TestNewSessionWithOptionsReturnsConfigError(t *testing.T) {
 	require.Nil(t, ctx)
 }
 
+func TestNewSessionWithOptionsReturnsErrorForNilCmd(t *testing.T) {
+	t.Parallel()
+
+	session, ctx, err := NewSessionWithOptions(nil, "config.yaml", Options{
+		LoadConfig: func(path string) (*config.Config, error) {
+			return &config.Config{}, nil
+		},
+		NewVMRepository: func(ctx context.Context, logger infraLog.Logger) (VMRepositoryCloser, error) {
+			t.Fatal("repository factory should not be called when cmd is nil")
+			return nil, nil
+		},
+		Logger: infraLog.DefaultLogger,
+	})
+
+	require.Error(t, err)
+	require.Nil(t, session)
+	require.Nil(t, ctx)
+}
+
 func TestNewSessionWithOptionsHandlesNilCommandContext(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	repo := mockCli.NewMockVMRepositoryCloser(ctrl)
 	repo.EXPECT().Close().Return(nil)
 
@@ -93,6 +113,7 @@ func TestNewSessionWithOptionsFallsBackToDefaultOptions(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	repo := mockCli.NewMockVMRepositoryCloser(ctrl)
 	repo.EXPECT().Close().Return(nil)
 
@@ -124,6 +145,7 @@ func TestOpenVMRepositoryCreatesAndStoresRepository(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	repo := mockCli.NewMockVMRepositoryCloser(ctrl)
 	repo.EXPECT().Close().Return(nil)
 
@@ -173,6 +195,7 @@ func TestOpenVMRepositoryReturnsWrappedError(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, ctx)
+	defer session.Close()
 
 	err = session.OpenVMRepository(ctx)
 	require.ErrorIs(t, err, expectedErr)
@@ -183,6 +206,7 @@ func TestOpenVMRepositoryIsIdempotent(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	repo := mockCli.NewMockVMRepositoryCloser(ctrl)
 	repo.EXPECT().Close().Return(nil)
 
@@ -221,6 +245,7 @@ func TestSessionCloseIsIdempotent(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	repo := mockCli.NewMockVMRepositoryCloser(ctrl)
 	repo.EXPECT().Close().Return(nil).Times(1)
 

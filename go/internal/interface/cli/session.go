@@ -55,6 +55,9 @@ func NewSession(cmd *cobra.Command, configPath string) (*Session, context.Contex
 }
 
 func NewSessionWithOptions(cmd *cobra.Command, configPath string, opts Options) (*Session, context.Context, error) {
+	if cmd == nil {
+		return nil, nil, errors.New("cmd is required")
+	}
 	if opts.LoadConfig == nil {
 		opts.LoadConfig = config.NewConfig
 	}

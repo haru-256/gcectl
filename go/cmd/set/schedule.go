@@ -37,7 +37,7 @@ Example:
 
 		session, ctx, err := cli.NewSession(cmd, cnfPath)
 		if err != nil {
-			presenter.NewConsolePresenter().Error(err.Error())
+			console.Error(err.Error())
 			os.Exit(1)
 		}
 		defer session.Close()
