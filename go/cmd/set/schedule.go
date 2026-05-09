@@ -4,12 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
-	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -38,34 +35,30 @@ Example:
 			os.Exit(1)
 		}
 
-		cfg, err := config.NewConfig(cnfPath)
+		session, ctx, err := cli.NewSession(cmd, cnfPath)
 		if err != nil {
-			console.Error(err.Error())
+			presenter.NewConsolePresenter().Error(err.Error())
+			os.Exit(1)
+		}
+		defer session.Close()
+
+		vm, err := session.Config.ResolveVM(vmName)
+		if err != nil {
+			session.Console.Error(err.Error())
+			session.Close()
 			os.Exit(1)
 		}
 
-		vm, err := cfg.ResolveVM(vmName)
+		err = session.OpenVMRepository(ctx)
 		if err != nil {
-			console.Error(err.Error())
+			session.Console.Error(err.Error())
+			session.Close()
 			os.Exit(1)
 		}
-
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-
-		// 依存性の注入
-		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
-		if err != nil {
-			console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
-			os.Exit(1)
-		}
-		defer func() {
-			_ = vmRepo.Close()
-		}()
 
 		if unset {
 			infraLog.DefaultLogger.Debugf("Unset schedule-policy")
-			unsetSchedulePolicyUseCase := usecase.NewUnsetSchedulePolicyUseCase(vmRepo, infraLog.DefaultLogger)
+			unsetSchedulePolicyUseCase := usecase.NewUnsetSchedulePolicyUseCase(session.VMRepository, infraLog.DefaultLogger)
 
 			var message string
 			if vm.SchedulePolicy != "" {
@@ -74,30 +67,32 @@ Example:
 				message = fmt.Sprintf("Unsetting schedule policy for VM %s", vmName)
 			}
 
-			err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+			err = session.Console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
 				return unsetSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName)
 			})
 
 			if err != nil {
-				console.Error(fmt.Sprintf("Failed to unset schedule-policy: %v", err))
+				session.Console.Error(fmt.Sprintf("Failed to unset schedule-policy: %v", err))
+				session.Close()
 				os.Exit(1)
 			}
-			console.Success(fmt.Sprintf("Unset schedule-policy: %v", policyName))
+			session.Console.Success(fmt.Sprintf("Unset schedule-policy: %v", policyName))
 		} else {
 			infraLog.DefaultLogger.Debugf("Set schedule-policy")
-			setSchedulePolicyUseCase := usecase.NewSetSchedulePolicyUseCase(vmRepo, infraLog.DefaultLogger)
+			setSchedulePolicyUseCase := usecase.NewSetSchedulePolicyUseCase(session.VMRepository, infraLog.DefaultLogger)
 
 			message := fmt.Sprintf("Setting schedule policy %s for VM %s", policyName, vmName)
 
-			err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+			err = session.Console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
 				return setSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName)
 			})
 
 			if err != nil {
-				console.Error(fmt.Sprintf("Failed to set schedule-policy: %v", err))
+				session.Console.Error(fmt.Sprintf("Failed to set schedule-policy: %v", err))
+				session.Close()
 				os.Exit(1)
 			}
-			console.Success(fmt.Sprintf("Set schedule-policy: %v", policyName))
+			session.Console.Success(fmt.Sprintf("Set schedule-policy: %v", policyName))
 		}
 	},
 }

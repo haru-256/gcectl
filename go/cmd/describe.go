@@ -6,12 +6,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
-	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -27,49 +24,44 @@ Example:
   gcectl describe <vm_name>`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		console := presenter.NewConsolePresenter()
 		vmName := args[0]
 		infraLog.DefaultLogger.Debugf("Describe instance %s", vmName)
 		if vmName == "" {
-			console.Error("VM name is required")
+			presenter.NewConsolePresenter().Error("VM name is required")
 			os.Exit(1)
 		}
 
-		cfg, err := config.NewConfig(CnfPath)
+		session, ctx, err := cli.NewSession(cmd, CnfPath)
 		if err != nil {
-			console.Error(err.Error())
+			presenter.NewConsolePresenter().Error(err.Error())
 			os.Exit(1)
 		}
+		defer session.Close()
 
-		vm, err := cfg.ResolveVM(vmName)
+		vm, err := session.Config.ResolveVM(vmName)
 		if err != nil {
-			console.Error(err.Error())
+			session.Console.Error(err.Error())
+			session.Close()
 			os.Exit(1)
 		}
 
-		// Describe the instance
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-
-		// 依存性の注入
-		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
+		err = session.OpenVMRepository(ctx)
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
+			session.Console.Error(err.Error())
+			session.Close()
 			os.Exit(1)
 		}
-		defer func() {
-			_ = vmRepo.Close()
-		}()
-		describeVMUseCase := usecase.NewDescribeVMUseCase(vmRepo)
+
+		describeVMUseCase := usecase.NewDescribeVMUseCase(session.VMRepository)
 
 		vmDetail, uptimeStr, err := describeVMUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name)
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to get VM info: %v", err))
+			session.Console.Error(fmt.Sprintf("Failed to get VM info: %v", err))
+			session.Close()
 			os.Exit(1)
 		}
 
-		// Render VM detail
-		console.RenderVMDetail(presenter.VMDetail{
+		session.Console.RenderVMDetail(presenter.VMDetail{
 			Name:           vmDetail.Name,
 			Project:        vmDetail.Project,
 			Zone:           vmDetail.Zone,

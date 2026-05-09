@@ -4,12 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
-	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -38,42 +35,39 @@ Example:
 			os.Exit(1)
 		}
 
-		cfg, err := config.NewConfig(cnfPath)
+		session, ctx, err := cli.NewSession(cmd, cnfPath)
 		if err != nil {
-			console.Error(err.Error())
+			presenter.NewConsolePresenter().Error(err.Error())
+			os.Exit(1)
+		}
+		defer session.Close()
+
+		vm, err := session.Config.ResolveVM(vmName)
+		if err != nil {
+			session.Console.Error(err.Error())
+			session.Close()
 			os.Exit(1)
 		}
 
-		vm, err := cfg.ResolveVM(vmName)
+		err = session.OpenVMRepository(ctx)
 		if err != nil {
-			console.Error(err.Error())
+			session.Console.Error(err.Error())
+			session.Close()
 			os.Exit(1)
 		}
 
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-
-		// 依存性の注入
-		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
-		if err != nil {
-			console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
-			os.Exit(1)
-		}
-		defer func() {
-			_ = vmRepo.Close()
-		}()
-		updateMachineTypeUseCase := usecase.NewUpdateMachineTypeUseCase(vmRepo, infraLog.DefaultLogger)
+		updateMachineTypeUseCase := usecase.NewUpdateMachineTypeUseCase(session.VMRepository, infraLog.DefaultLogger)
 
 		message := fmt.Sprintf("Updating machine type for VM %s", vmName)
-		err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+		err = session.Console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
 			return updateMachineTypeUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, machineType)
 		})
-
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to set machine-type: %v", err))
+			session.Console.Error(fmt.Sprintf("Failed to set machine-type: %v", err))
+			session.Close()
 			os.Exit(1)
 		}
-		console.Success(fmt.Sprintf("Set machine-type to %v", machineType))
+		session.Console.Success(fmt.Sprintf("Set machine-type to %v", machineType))
 	},
 }
 

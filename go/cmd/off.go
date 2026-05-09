@@ -4,13 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
-	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -30,48 +27,46 @@ Example:
 }
 
 func offRun(cmd *cobra.Command, args []string) {
-	console := presenter.NewConsolePresenter()
 	vmNames := args
 	infraLog.DefaultLogger.Debugf("Turning off the instances %s", strings.Join(vmNames, ", "))
 
-	cfg, err := config.NewConfig(CnfPath)
+	session, ctx, err := cli.NewSession(cmd, CnfPath)
 	if err != nil {
-		console.Error(err.Error())
+		presenter.NewConsolePresenter().Error(err.Error())
+		os.Exit(1)
+	}
+	defer session.Close()
+
+	vms, err := session.Config.ResolveVMs(vmNames)
+	if err != nil {
+		session.Console.Error(err.Error())
+		session.Close()
 		os.Exit(1)
 	}
 
-	vms, err := cfg.ResolveVMs(vmNames)
+	err = session.OpenVMRepository(ctx)
 	if err != nil {
-		console.Error(err.Error())
+		session.Console.Error(err.Error())
+		session.Close()
 		os.Exit(1)
 	}
 
-	// Turn off the instances
-	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	stopVMUseCase := usecase.NewStopVMUseCase(session.VMRepository, infraLog.DefaultLogger)
 
-	// 依存性の注入
-	vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
-	if err != nil {
-		console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
-		os.Exit(1)
-	}
-	defer func() {
-		_ = vmRepo.Close()
-	}()
-	stopVMUseCase := usecase.NewStopVMUseCase(vmRepo, infraLog.DefaultLogger)
-
-	err = console.ExecuteWithProgress(ctx,
+	err = session.Console.ExecuteWithProgress(
+		ctx,
 		fmt.Sprintf("Stopping VMs %s", strings.Join(vmNames, ", ")),
 		func(ctx context.Context) error {
 			return stopVMUseCase.Execute(ctx, vms)
-		})
+		},
+	)
 	if err != nil {
-		console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v", err))
+		session.Console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v", err))
+		session.Close()
 		os.Exit(1)
 	}
 
-	console.Success(fmt.Sprintf("Turned off the instances: %v", strings.Join(vmNames, ", ")))
+	session.Console.Success(fmt.Sprintf("Turned off the instances: %v", strings.Join(vmNames, ", ")))
 }
 
 func init() {
