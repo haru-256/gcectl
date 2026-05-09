@@ -3,12 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
-	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -22,32 +19,26 @@ var listCmd = &cobra.Command{
 Example:
   gcectl list`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// 依存性の注入
 		console := presenter.NewConsolePresenter()
-		cfg, err := config.NewConfig(CnfPath)
+		session, ctx, err := cli.NewSession(cmd, CnfPath)
 		if err != nil {
 			console.Error(err.Error())
 			os.Exit(1)
 		}
+		defer session.Close()
 
-		// List VMs
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-
-		vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
+		err = session.OpenVMRepository(ctx)
 		if err != nil {
-			console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
+			console.Error(err.Error())
+			session.Close()
 			os.Exit(1)
 		}
-		defer func() {
-			_ = vmRepo.Close()
-		}()
-		listVMsUC := usecase.NewListVMsUseCase(vmRepo)
 
-		items, err := listVMsUC.Execute(ctx, cfg.VMs)
+		listVMsUC := usecase.NewListVMsUseCase(session.VMRepository)
+
+		items, err := listVMsUC.Execute(ctx, session.Config.VMs)
 		infraLog.DefaultLogger.Debugf("Found %d VMs", len(items))
 
-		// Convert usecase items to presenter items
 		presenterItems := make([]presenter.VMListItem, len(items))
 		for i, item := range items {
 			presenterItems[i] = presenter.VMListItem{
@@ -61,12 +52,12 @@ Example:
 			}
 		}
 
-		// Render VM list
 		if len(presenterItems) > 0 {
 			console.RenderVMList(presenterItems)
 		}
 		if err != nil {
 			console.Error(fmt.Sprintf("Failed to list some VMs: %v", err))
+			session.Close()
 			os.Exit(1)
 		}
 	},

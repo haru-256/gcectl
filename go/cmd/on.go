@@ -4,13 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
-	"github.com/haru-256/gcectl/internal/infrastructure/config"
-	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
+	"github.com/haru-256/gcectl/internal/interface/cli"
 	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/haru-256/gcectl/internal/usecase"
 	"github.com/spf13/cobra"
@@ -34,32 +31,28 @@ func onRun(cmd *cobra.Command, args []string) {
 	vmNames := args
 	infraLog.DefaultLogger.Debugf("Turning on the instances %s", strings.Join(vmNames, ", "))
 
-	cfg, err := config.NewConfig(CnfPath)
+	session, ctx, err := cli.NewSession(cmd, CnfPath)
 	if err != nil {
 		console.Error(err.Error())
 		os.Exit(1)
 	}
+	defer session.Close()
 
-	vms, err := cfg.ResolveVMs(vmNames)
+	vms, err := session.Config.ResolveVMs(vmNames)
 	if err != nil {
 		console.Error(err.Error())
+		session.Close()
 		os.Exit(1)
 	}
 
-	// Turn on the instances
-	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	// 依存性の注入
-	vmRepo, err := gcp.NewVMRepository(ctx, infraLog.DefaultLogger)
+	err = session.OpenVMRepository(ctx)
 	if err != nil {
-		console.Error(fmt.Sprintf("Failed to create VM repository: %v", err))
+		console.Error(err.Error())
+		session.Close()
 		os.Exit(1)
 	}
-	defer func() {
-		_ = vmRepo.Close()
-	}()
-	startVMUseCase := usecase.NewStartVMUseCase(vmRepo, infraLog.DefaultLogger)
+
+	startVMUseCase := usecase.NewStartVMUseCase(session.VMRepository, infraLog.DefaultLogger)
 
 	err = console.ExecuteWithProgress(
 		ctx,
@@ -68,9 +61,9 @@ func onRun(cmd *cobra.Command, args []string) {
 			return startVMUseCase.Execute(ctx, vms)
 		},
 	)
-
 	if err != nil {
 		console.Error(fmt.Sprintf("Failed to turn on the instances: %v", err))
+		session.Close()
 		os.Exit(1)
 	}
 
