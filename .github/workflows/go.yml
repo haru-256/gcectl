@@ -5,11 +5,11 @@ on:
     branches:
       - main
     paths:
-      - "go/**.go"
+      - "go/**"
       - ".github/workflows/go.yml"
   pull_request:
     paths:
-      - "go/**.go"
+      - "go/**"
       - ".github/workflows/go.yml"
 
 jobs:

@@ -4,11 +4,11 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "rust/**.rs"
+      - "rust/**"
       - ".github/workflows/rust.yml"
   pull_request:
     paths:
-      - "rust/**.rs"
+      - "rust/**"
       - ".github/workflows/rust.yml"
 
 env:
