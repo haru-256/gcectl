@@ -198,7 +198,7 @@ func TestOpenVMRepositoryReturnsWrappedError(t *testing.T) {
 
 	err = session.OpenVMRepository(ctx)
 	require.ErrorIs(t, err, expectedErr)
-	require.ErrorContains(t, err, "Failed to create VM repository: repository failed")
+	require.ErrorContains(t, err, "failed to create VM repository: repository failed")
 }
 
 func TestOpenVMRepositoryIsIdempotent(t *testing.T) {

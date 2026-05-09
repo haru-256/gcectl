@@ -96,7 +96,7 @@ func (s *Session) OpenVMRepository(ctx context.Context) error {
 	}
 	repo, err := s.newVMRepository(ctx, s.logger)
 	if err != nil {
-		return fmt.Errorf("Failed to create VM repository: %w", err) //nolint:staticcheck // Capitalized error preserved for backward-compatible behavior
+		return fmt.Errorf("failed to create VM repository: %w", err)
 	}
 	s.VMRepository = repo
 	s.closeRepo = repo.Close
