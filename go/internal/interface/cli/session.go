@@ -12,7 +12,6 @@ import (
 	"github.com/haru-256/gcectl/internal/infrastructure/config"
 	"github.com/haru-256/gcectl/internal/infrastructure/gcp"
 	infraLog "github.com/haru-256/gcectl/internal/infrastructure/log"
-	"github.com/haru-256/gcectl/internal/interface/presenter"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +33,6 @@ type Options struct {
 }
 
 type Session struct {
-	Console      *presenter.ConsolePresenter
 	Config       *config.Config
 	VMRepository repository.VMRepository
 
@@ -82,7 +80,6 @@ func NewSessionWithOptions(cmd *cobra.Command, configPath string, opts Options) 
 	ctx, stop := signal.NotifyContext(parentCtx, os.Interrupt, syscall.SIGTERM)
 
 	return &Session{
-		Console:         presenter.NewConsolePresenter(),
 		Config:          cfg,
 		stop:            stop,
 		newVMRepository: opts.NewVMRepository,

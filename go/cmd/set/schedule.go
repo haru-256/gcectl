@@ -44,14 +44,14 @@ Example:
 
 		vm, err := session.Config.ResolveVM(vmName)
 		if err != nil {
-			session.Console.Error(err.Error())
+			console.Error(err.Error())
 			session.Close()
 			os.Exit(1)
 		}
 
 		err = session.OpenVMRepository(ctx)
 		if err != nil {
-			session.Console.Error(err.Error())
+			console.Error(err.Error())
 			session.Close()
 			os.Exit(1)
 		}
@@ -67,32 +67,32 @@ Example:
 				message = fmt.Sprintf("Unsetting schedule policy for VM %s", vmName)
 			}
 
-			err = session.Console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+			err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
 				return unsetSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName)
 			})
 
 			if err != nil {
-				session.Console.Error(fmt.Sprintf("Failed to unset schedule-policy: %v", err))
+				console.Error(fmt.Sprintf("Failed to unset schedule-policy: %v", err))
 				session.Close()
 				os.Exit(1)
 			}
-			session.Console.Success(fmt.Sprintf("Unset schedule-policy: %v", policyName))
+			console.Success(fmt.Sprintf("Unset schedule-policy: %v", policyName))
 		} else {
 			infraLog.DefaultLogger.Debugf("Set schedule-policy")
 			setSchedulePolicyUseCase := usecase.NewSetSchedulePolicyUseCase(session.VMRepository, infraLog.DefaultLogger)
 
 			message := fmt.Sprintf("Setting schedule policy %s for VM %s", policyName, vmName)
 
-			err = session.Console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+			err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
 				return setSchedulePolicyUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, policyName)
 			})
 
 			if err != nil {
-				session.Console.Error(fmt.Sprintf("Failed to set schedule-policy: %v", err))
+				console.Error(fmt.Sprintf("Failed to set schedule-policy: %v", err))
 				session.Close()
 				os.Exit(1)
 			}
-			session.Console.Success(fmt.Sprintf("Set schedule-policy: %v", policyName))
+			console.Success(fmt.Sprintf("Set schedule-policy: %v", policyName))
 		}
 	},
 }

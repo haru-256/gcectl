@@ -27,33 +27,34 @@ Example:
 }
 
 func offRun(cmd *cobra.Command, args []string) {
+	console := presenter.NewConsolePresenter()
 	vmNames := args
 	infraLog.DefaultLogger.Debugf("Turning off the instances %s", strings.Join(vmNames, ", "))
 
 	session, ctx, err := cli.NewSession(cmd, CnfPath)
 	if err != nil {
-		presenter.NewConsolePresenter().Error(err.Error())
+		console.Error(err.Error())
 		os.Exit(1)
 	}
 	defer session.Close()
 
 	vms, err := session.Config.ResolveVMs(vmNames)
 	if err != nil {
-		session.Console.Error(err.Error())
+		console.Error(err.Error())
 		session.Close()
 		os.Exit(1)
 	}
 
 	err = session.OpenVMRepository(ctx)
 	if err != nil {
-		session.Console.Error(err.Error())
+		console.Error(err.Error())
 		session.Close()
 		os.Exit(1)
 	}
 
 	stopVMUseCase := usecase.NewStopVMUseCase(session.VMRepository, infraLog.DefaultLogger)
 
-	err = session.Console.ExecuteWithProgress(
+	err = console.ExecuteWithProgress(
 		ctx,
 		fmt.Sprintf("Stopping VMs %s", strings.Join(vmNames, ", ")),
 		func(ctx context.Context) error {
@@ -61,12 +62,12 @@ func offRun(cmd *cobra.Command, args []string) {
 		},
 	)
 	if err != nil {
-		session.Console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v", err))
+		console.Error(fmt.Sprintf("Failed to turn off the instance(s): %v", err))
 		session.Close()
 		os.Exit(1)
 	}
 
-	session.Console.Success(fmt.Sprintf("Turned off the instances: %v", strings.Join(vmNames, ", ")))
+	console.Success(fmt.Sprintf("Turned off the instances: %v", strings.Join(vmNames, ", ")))
 }
 
 func init() {

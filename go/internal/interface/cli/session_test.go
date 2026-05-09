@@ -34,7 +34,6 @@ func TestNewSessionWithOptionsCreatesSession(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, session)
 	require.NotNil(t, ctx)
-	require.NotNil(t, session.Console)
 	require.NotNil(t, session.Config)
 	require.Nil(t, session.VMRepository)
 }

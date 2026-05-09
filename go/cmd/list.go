@@ -19,16 +19,17 @@ var listCmd = &cobra.Command{
 Example:
   gcectl list`,
 	Run: func(cmd *cobra.Command, args []string) {
+		console := presenter.NewConsolePresenter()
 		session, ctx, err := cli.NewSession(cmd, CnfPath)
 		if err != nil {
-			presenter.NewConsolePresenter().Error(err.Error())
+			console.Error(err.Error())
 			os.Exit(1)
 		}
 		defer session.Close()
 
 		err = session.OpenVMRepository(ctx)
 		if err != nil {
-			session.Console.Error(err.Error())
+			console.Error(err.Error())
 			session.Close()
 			os.Exit(1)
 		}
@@ -52,10 +53,10 @@ Example:
 		}
 
 		if len(presenterItems) > 0 {
-			session.Console.RenderVMList(presenterItems)
+			console.RenderVMList(presenterItems)
 		}
 		if err != nil {
-			session.Console.Error(fmt.Sprintf("Failed to list some VMs: %v", err))
+			console.Error(fmt.Sprintf("Failed to list some VMs: %v", err))
 			session.Close()
 			os.Exit(1)
 		}

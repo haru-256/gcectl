@@ -44,14 +44,14 @@ Example:
 
 		vm, err := session.Config.ResolveVM(vmName)
 		if err != nil {
-			session.Console.Error(err.Error())
+			console.Error(err.Error())
 			session.Close()
 			os.Exit(1)
 		}
 
 		err = session.OpenVMRepository(ctx)
 		if err != nil {
-			session.Console.Error(err.Error())
+			console.Error(err.Error())
 			session.Close()
 			os.Exit(1)
 		}
@@ -59,15 +59,15 @@ Example:
 		updateMachineTypeUseCase := usecase.NewUpdateMachineTypeUseCase(session.VMRepository, infraLog.DefaultLogger)
 
 		message := fmt.Sprintf("Updating machine type for VM %s", vmName)
-		err = session.Console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
+		err = console.ExecuteWithProgress(ctx, message, func(ctx context.Context) error {
 			return updateMachineTypeUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name, machineType)
 		})
 		if err != nil {
-			session.Console.Error(fmt.Sprintf("Failed to set machine-type: %v", err))
+			console.Error(fmt.Sprintf("Failed to set machine-type: %v", err))
 			session.Close()
 			os.Exit(1)
 		}
-		session.Console.Success(fmt.Sprintf("Set machine-type to %v", machineType))
+		console.Success(fmt.Sprintf("Set machine-type to %v", machineType))
 	},
 }
 

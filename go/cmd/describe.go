@@ -24,30 +24,31 @@ Example:
   gcectl describe <vm_name>`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		console := presenter.NewConsolePresenter()
 		vmName := args[0]
 		infraLog.DefaultLogger.Debugf("Describe instance %s", vmName)
 		if vmName == "" {
-			presenter.NewConsolePresenter().Error("VM name is required")
+			console.Error("VM name is required")
 			os.Exit(1)
 		}
 
 		session, ctx, err := cli.NewSession(cmd, CnfPath)
 		if err != nil {
-			presenter.NewConsolePresenter().Error(err.Error())
+			console.Error(err.Error())
 			os.Exit(1)
 		}
 		defer session.Close()
 
 		vm, err := session.Config.ResolveVM(vmName)
 		if err != nil {
-			session.Console.Error(err.Error())
+			console.Error(err.Error())
 			session.Close()
 			os.Exit(1)
 		}
 
 		err = session.OpenVMRepository(ctx)
 		if err != nil {
-			session.Console.Error(err.Error())
+			console.Error(err.Error())
 			session.Close()
 			os.Exit(1)
 		}
@@ -56,12 +57,12 @@ Example:
 
 		vmDetail, uptimeStr, err := describeVMUseCase.Execute(ctx, vm.Project, vm.Zone, vm.Name)
 		if err != nil {
-			session.Console.Error(fmt.Sprintf("Failed to get VM info: %v", err))
+			console.Error(fmt.Sprintf("Failed to get VM info: %v", err))
 			session.Close()
 			os.Exit(1)
 		}
 
-		session.Console.RenderVMDetail(presenter.VMDetail{
+		console.RenderVMDetail(presenter.VMDetail{
 			Name:           vmDetail.Name,
 			Project:        vmDetail.Project,
 			Zone:           vmDetail.Zone,
