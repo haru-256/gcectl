@@ -5,11 +5,6 @@ updates:
     schedule:
       interval: "monthly"
     groups:
-      major:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
       minor-patch:
         patterns:
           - "*"
@@ -22,11 +17,6 @@ updates:
     schedule:
       interval: "monthly"
     groups:
-      major:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
       minor-patch:
         patterns:
           - "*"
@@ -43,12 +33,6 @@ updates:
     schedule:
       interval: "monthly"
     groups:
-      major:
-        patterns:
-          - "hashicorp/google"
-          - "hashicorp/google-beta"
-        update-types:
-          - "major"
       minor-patch:
         patterns:
           - "hashicorp/google"
