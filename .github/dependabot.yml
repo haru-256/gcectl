@@ -21,6 +21,18 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    groups:
+      major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+      minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "terraform"
     directories:
@@ -31,13 +43,13 @@ updates:
     schedule:
       interval: "monthly"
     groups:
-      terraform-providers-major:
+      major:
         patterns:
           - "hashicorp/google"
           - "hashicorp/google-beta"
         update-types:
           - "major"
-      terraform-providers-minor-patch:
+      minor-patch:
         patterns:
           - "hashicorp/google"
           - "hashicorp/google-beta"
