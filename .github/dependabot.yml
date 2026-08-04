@@ -31,14 +31,16 @@ updates:
     schedule:
       interval: "monthly"
     groups:
-      major:
+      terraform-providers-major:
         patterns:
-          - "*"
+          - "hashicorp/google"
+          - "hashicorp/google-beta"
         update-types:
           - "major"
-      minor-patch:
+      terraform-providers-minor-patch:
         patterns:
-          - "*"
+          - "hashicorp/google"
+          - "hashicorp/google-beta"
         update-types:
           - "minor"
           - "patch"
